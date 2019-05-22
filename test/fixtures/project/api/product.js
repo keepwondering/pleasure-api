@@ -47,11 +47,11 @@ module.exports = {
       create ({ entry }) {
         return entry
       },
-/*
-      update ({ entry }) {
-        return entry
-      }
-*/
+      /*
+            update ({ entry }) {
+              return entry
+            }
+      */
     }
   }
 }

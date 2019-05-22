@@ -42,8 +42,8 @@ function anyUser ({ user }) {
   return !!user
 }
 
-function anyBody ({ user }) {
-  return !!user
+function anyBody () {
+  return true
 }
 
 export default {

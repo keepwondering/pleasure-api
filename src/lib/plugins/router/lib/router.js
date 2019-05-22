@@ -25,7 +25,6 @@ export default {
     getEntities()
       .then(({ entities: e, schemas }) => {
         permissions = getPermissions(schemas)
-        console.log({ permissions })
         entities = e
         pleasureEntityModelMap = schemas
       })

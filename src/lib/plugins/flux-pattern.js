@@ -24,7 +24,6 @@ function fluxDelivery (entityName, method, entry) {
   }
 
   if (!PleasureEntityMap) {
-    console.error(`flux to ${ method } '${ entityName }' when not initialized.`)
     return
   }
 

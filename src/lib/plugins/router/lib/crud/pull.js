@@ -1,6 +1,6 @@
 import get from 'lodash/get'
 import forEach from 'lodash/forEach'
-import { ApiError } from 'pleasure-client'
+import { ApiError } from 'pleasure-api-client'
 import castArray from 'lodash/castArray'
 
 export async function pull ({ entity, id, entryPath, pull }) {

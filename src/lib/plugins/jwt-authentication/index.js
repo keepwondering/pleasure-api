@@ -1,4 +1,5 @@
-import { APIError } from 'pleasure-client'
+import { APIError } from 'pleasure-api-client'
+import { findRoot } from 'pleasure-utils'
 import { isValidSession } from './lib/jwt.js'
 import { init, sign, verify } from './lib/jwt-token.js'
 import { signIn as SignIn } from './lib/jwt-authentication.js'
@@ -67,7 +68,7 @@ export default {
     const signIn = SignIn.bind(null, sessionFields, sessionLength)
 
     router.use(koaJwt({
-      secret: fs.readFileSync(publicKey),
+      secret: fs.readFileSync(findRoot(publicKey)),
       cookie: cookieName,
       passthrough: true
     }))

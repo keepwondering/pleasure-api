@@ -1,4 +1,4 @@
-import './ApiAccess.js'
+import '../lib/plugins/router/types/ApiAccess.js'
 import './ApiPlugin.js'
 import './Entity.js'
 import './PleasureEntityMap'

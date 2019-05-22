@@ -1,14 +1,12 @@
-import Koa from 'koa'
-import { getConfig } from 'lib/get-config'
-import { findRoot } from 'lib/utils/find-root'
-import { packageJson } from 'lib/tools/package-json'
-import { api } from 'src'
-import koaBody from 'koa-body'
-import { Nuxt, Builder } from 'nuxt'
-import fs from 'fs'
-import get from 'lodash/get'
-import chokidar from 'chokidar'
-import path from 'path'
+const Koa = require('koa')
+const pleasureApi = require('../../')
+const { getConfig, findRoot, tools: { packageJson } } = require('pleasure')
+const koaBody = require('koa-body')
+const { Nuxt, Builder } = require('nuxt')
+const fs = require('fs')
+const { get } = require('lodash')
+const chokidar = require('chokidar')
+const path = require('path')
 
 let runningConnection
 let runningBuilder
@@ -41,7 +39,7 @@ function watcher () {
   })
 }
 
-export async function start (port) {
+async function start (port) {
   if (runningConnection) {
     console.error(`An app is already running`)
     return
@@ -51,7 +49,6 @@ export async function start (port) {
   delete require.cache[require.resolve(nuxtConfigFile)]
   delete require.cache[require.resolve(findRoot('./pleasure.config.js'))]
 
-  const { pleasureApi } = api
   const { api: apiConfig } = getConfig(null, true)
   port = port || apiConfig.port
 
@@ -118,7 +115,7 @@ export async function start (port) {
   return port
 }
 
-export async function restart () {
+async function restart () {
   if (!runningPort || !runningConnection) {
     console.error(`No app instance running`)
     return
@@ -132,4 +129,10 @@ export async function restart () {
   runningConnection.close()
   runningConnection = null
   start(runningPort)
+}
+
+module.exports = {
+  watcher,
+  start,
+  restart
 }

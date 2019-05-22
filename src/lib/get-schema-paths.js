@@ -1,12 +1,10 @@
 import { getEntities } from 'src/lib/get-entities'
 import forOwn from 'lodash/forOwn'
 import camelCase from 'lodash/camelCase'
-import pick from 'lodash/pick'
 import mapValues from 'lodash/mapValues'
 import merge from 'lodash/merge'
 import get from 'lodash/get'
 import omit from 'lodash/omit'
-import { getConfig } from 'lib/get-config'
 
 let schemaPath
 

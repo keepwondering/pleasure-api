@@ -1,8 +1,9 @@
 import Router from 'koa-router'
-import { getConfig } from 'lib/get-config'
+import { getConfig } from './get-config.js'
 import { getPlugins } from './get-plugins.js'
-import eventsBus from 'lib/events-bus'
+import { EventBus } from 'pleasure-utils'
 import { getEntities } from './get-entities'
+import merge from 'deepmerge'
 
 /**
  * @function API.pleasureApi
@@ -18,7 +19,7 @@ import { getEntities } from './get-entities'
  * ```
  *
  * @param {ApiConfig} config - Override local API configuration. See {@link ApiConfig}
- * @param {httpServer} server - http server. See {@link https://nodejs.org/api/http.html}
+ * @param {Server} server - http server. See {@link https://nodejs.org/api/http.html}
  * @return {Function} Koa Plugin.
  *
  * @example <caption>koa as the http server</caption>
@@ -53,22 +54,25 @@ import { getEntities } from './get-entities'
  */
 
 export function pleasureApi (config = {}, server) {
-  const { on } = eventsBus()
+  const { on } = EventBus()
 
-  const { api: { prefix } } = getConfig({ api: config })
+  const { prefix } = getConfig(config)
   const router = Router({
     prefix
   })
 
   const { prepare, extend, plugins, pluginsApi, pluginsConfig } = getPlugins(config)
-  const mainPayload = { router, pluginsApi, server, pluginsConfig }
+  const mainPayload = { router, pluginsApi, server, pluginsConfig, getEntities }
 
   const pluginRouter = ({ cb, config }) => {
     return cb(Object.assign({}, mainPayload, { config }))
   }
 
   plugins.forEach(plugin => {
-    const { config = {}, schemaCreated, init, prepare: prepareCallback, extend: extendCallback } = plugin
+    const { name, config = {}, schemaCreated, init, prepare: prepareCallback, extend: extendCallback } = plugin
+    // console.log({ name, config })
+    merge(config, getConfig()[name] || {})
+    // console.log({ config })
     const pluginMainPayload = Object.assign({ config }, mainPayload)
 
     if (schemaCreated) {

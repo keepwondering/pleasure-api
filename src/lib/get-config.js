@@ -1,4 +1,4 @@
-import { findRoot, findPackageJson } from 'lib/utils/find-root.js'
+import { packageJson, getConfig as _getConfig } from 'pleasure-utils'
 import kebabCase from 'lodash/kebabCase'
 import merge from 'deepmerge'
 
@@ -47,8 +47,13 @@ import merge from 'deepmerge'
  * ```
  */
 
-export default function (localConfig = {}) {
-  const { name } = require(findPackageJson())
+/**
+ *
+ * @param {Object} [override] - Optionally overrides local config
+ * @return {API.ApiConfig}
+ */
+export function getConfig (override = {}) {
+  const { name } = packageJson()
   return merge({
     prefix: '/api',
     port: 3000,
@@ -71,5 +76,5 @@ export default function (localConfig = {}) {
     },
     entitiesPath: 'api', // relative to <project-root>
     entitiesUri: '/entities'
-  }, localConfig.api || {})
+  }, _getConfig('api', override))
 }

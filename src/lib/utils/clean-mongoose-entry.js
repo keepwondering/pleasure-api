@@ -1,4 +1,4 @@
-import { cleanEmptyArrays } from 'lib/utils/clean-empty-array'
+import { cleanEmptyArrays } from './clean-empty-array'
 
 export function cleanMongooseEntry (entry) {
   // clean array empties

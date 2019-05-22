@@ -9,10 +9,10 @@ import castArray from 'lodash/castArray'
 import pleasureResponse from './plugins/pleasure-response'
 import merge from 'deepmerge'
 import get from 'lodash/get'
-import { getConfig } from 'lib/get-config'
+import { getConfig } from './get-config.js'
 
-export function getPlugins (config) {
-  const { api } = getConfig({ api: config })
+export function getPlugins (configOverride) {
+  const api = getConfig(configOverride)
 
   let plugins = [helmet, pleasureContext, jwtAuthentication, schemas, socketIo, fluxPattern, apiRouter].concat(castArray(api.plugins))
   plugins.push(pleasureResponse) // last plugin is the response handler

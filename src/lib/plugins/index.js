@@ -1,4 +1,4 @@
-import * as authorization from '../get-permissions.js'
+import * as authorization from './router/lib/get-permissions.js'
 
 /**
  * @typedef {Object} ApiPlugin

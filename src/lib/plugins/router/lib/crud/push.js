@@ -1,5 +1,5 @@
 import get from 'lodash/get'
-import { ApiError } from 'pleasure-client'
+import { ApiError } from 'pleasure-api-client'
 
 export async function push ({ entity, id, entryPath, newEntry, params }) {
   const doc = await entity.findById(id)

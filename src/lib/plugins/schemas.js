@@ -8,7 +8,7 @@ import defaults from 'lodash/defaults'
 
 export default {
   prepare ({ router }) {
-    const { api } = getConfig()
+    const api = getConfig()
 
     let schemas
 

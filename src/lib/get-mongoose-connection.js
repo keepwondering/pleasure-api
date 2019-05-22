@@ -1,5 +1,5 @@
 import mongoose from 'mongoose'
-import { getConfig } from 'lib/get-config'
+import { getConfig } from './get-config.js'
 
 /**
  * @typedef MongoClient
@@ -27,7 +27,7 @@ const pif = (w, what = null) => {
 }
 
 export function getMongoCredentials (additional = {}) {
-  const { api: { mongodb } } = getConfig({ api: { mongodb: additional } })
+  const { mongodb } = getConfig({ mongodb: additional })
   return mongodb
 }
 
@@ -72,7 +72,7 @@ export function getMongoUri (credentials = {}) {
  * ```
  */
 export function getMongoConnection (config = {}) {
-  const { api: { debug, mongodb: { driverOptions } } } = getConfig({ api: { mongodb: config } })
+  const { debug, mongodb: { driverOptions } } = getConfig({ mongodb: config })
 
   const connection = mongoose
     .createConnection(getMongoUri(config), driverOptions)
@@ -119,5 +119,3 @@ export function getMongoConnection (config = {}) {
 
   return connection
 }
-
-module.exports = { getMongoConnection, getMongoUri }

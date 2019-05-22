@@ -1,0 +1,25 @@
+{
+  "name": "pleasure-dummy-project",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "test": "NODE_ENV=test ava --verbose --serial",
+    "start": "node --preserve-symlinks index.js",
+    "dev": "NODE_ENV=development nodemon --preserve-symlinks -w ../../../dist index.js"
+  },
+  "dependencies": {
+    "bluebird": "^3.5.3",
+    "koa": "^2.7.0",
+    "koa-body": "^4.1.0",
+    "koa-router": "^7.4.0",
+    "lodash": "^4.17.11",
+    "md5": "^2.2.1",
+    "mongoose": "^5.4.19",
+    "nuxt": "^2.6.2",
+    "pleasure": "keepwondering/pleasure#v1-beta"
+  },
+  "devDependencies": {
+    "ava": "^1.4.1"
+  }
+}

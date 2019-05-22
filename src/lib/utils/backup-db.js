@@ -1,5 +1,5 @@
 import { MongoBackup } from './mongo-backup'
-import { getConfig } from 'lib/get-config.js'
+import { getConfig } from 'pleasure-utils'
 import querystring from 'querystring'
 
 import moment from 'moment'
@@ -16,7 +16,7 @@ const pif = (w, what = null) => {
 
 export function getMongoUri (credentials = {}) {
   // important: do not move to the global scope
-  const { api: { mongodb } } = getConfig()
+  const { mongodb } = getConfig('api')
 
   const { username = mongodb.username, password = mongodb.password, host = mongodb.host, port = mongodb.port, database = mongodb.database } = credentials
   let { driverOptions = {} } = credentials
@@ -25,7 +25,7 @@ export function getMongoUri (credentials = {}) {
 }
 
 export async function backupDB ({ name, compress = true, verbose = true } = {}) {
-  const { api: { mongodb } } = getConfig()
+  const { mongodb } = getConfig('api')
   // todo: implement plugins
   // const { tmpFolder, uploadFolder } = require('../../server/utils/project-paths')
 

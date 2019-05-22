@@ -2,7 +2,7 @@ import fs from 'fs'
 import jwt from 'jsonwebtoken'
 import moment from 'moment'
 import hash from 'object-hash'
-import { findRoot } from 'lib/utils/find-root'
+import { findRoot } from 'pleasure-utils'
 import sessionBlacklist from './session-blacklist.js'
 
 // const { models: { sessionBlacklist: SessionBlacklist } } = getModels()

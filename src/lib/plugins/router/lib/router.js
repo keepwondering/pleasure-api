@@ -1,14 +1,12 @@
-import { getConfig } from 'lib/get-config'
 import { parseNumberAndBoolean } from 'src/lib/utils/parse-number-and-boolean'
 import qs from 'qs'
-import { getEntities } from 'src/lib/get-entities.js'
 import { create, read, update, remove, list, push, pull } from './crud/index.js'
 import { queryFilter } from './parse-query-filter'
 import { resolvePleasureMethod } from './resolve-pleasure-method.js'
 import merge from 'deepmerge'
 import { Types } from 'mongoose'
 import Boom from 'boom'
-import { getPermissions } from 'src/lib/get-permissions'
+import { getPermissions } from 'src/lib/plugins/router/lib/get-permissions'
 import { filterAccess } from './filter-access.js'
 import { isObjectId } from 'src/lib/utils/is-object-id'
 import get from 'lodash/get'
@@ -21,16 +19,13 @@ let pleasureEntityModelMap = null
 let permissions = null
 
 export default {
-  prepare ({ router }) {
-    const { api } = getConfig()
-
-    getPermissions()
-      .then(p => {
-        permissions = p
-      })
+  name: 'crud',
+  prepare ({ router, getEntities }) {
 
     getEntities()
       .then(({ entities: e, schemas }) => {
+        permissions = getPermissions(schemas)
+        console.log({ permissions })
         entities = e
         pleasureEntityModelMap = schemas
       })
@@ -139,6 +134,15 @@ export default {
 
       return next()
     })
+  },
+  methods: {
+    getPermissions () {
+      if (!pleasureEntityModelMap) {
+        return
+      }
+
+      return getPermissions(pleasureEntityModelMap)
+    }
   },
   extend ({ router }) {
     // list documents

@@ -1,9 +1,9 @@
 import helmet from 'koa-helmet'
-import { getConfig } from '../../../lib/get-config'
+import { getConfig } from 'pleasure-utils'
 
 export default {
   prepare ({ router }) {
-    const { api: { helmet: helmetConfig = {} } } = getConfig()
+    const { helmet: helmetConfig = {} } = getConfig('api')
     router.use(helmet(helmetConfig))
   }
 }

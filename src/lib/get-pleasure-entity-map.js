@@ -1,8 +1,7 @@
+import { findRoot, readdirAsync } from 'pleasure-utils'
+import { getConfig } from './get-config.js'
 import Entity from 'src/types/Entity.js'
-import { getConfig } from 'lib/get-config.js'
-import { readdirAsync } from 'lib/tools/readdir-async.js'
 import { getCollectionName } from './get-collection-name.js'
-import { findRoot } from 'lib/utils/find-root'
 import path from 'path'
 import merge from 'deepmerge'
 
@@ -26,7 +25,7 @@ import merge from 'deepmerge'
  * @see PleasureEntityMap
  */
 export async function getPleasureEntityMap () {
-  const { api: { entitiesPath } } = getConfig()
+  const { entitiesPath } = getConfig()
   const schemaFiles = await readdirAsync(findRoot(entitiesPath))
 
   const PleasureSchemaMap = {}

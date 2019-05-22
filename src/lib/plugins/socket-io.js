@@ -1,5 +1,5 @@
 import socketIo from 'socket.io'
-import { getConfig } from 'lib/get-config'
+import { getConfig } from 'lib/get-config.js'
 import castArray from 'lodash/castArray'
 import get from 'lodash/get'
 
@@ -22,7 +22,7 @@ export default {
     PleasureEntityMap = pleasureEntityMap
     jwt = pluginsApi.jwt
 
-    const { api: { prefix } } = getConfig()
+    const { prefix } = getConfig()
     const { getDeliveryGroup } = config
 
     io = socketIo(server, { path: `${ prefix }-socket` })

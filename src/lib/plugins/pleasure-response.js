@@ -8,10 +8,12 @@ export default {
     router.use((ctx) => {
       // api returning a string
       // will be converted in an object response
+/*
       if (!ctx.$pleasure.res) {
         ctx.body = Boom.badData().output.payload
         return
       }
+*/
 
       let apiResponse
 

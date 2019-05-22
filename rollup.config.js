@@ -2,8 +2,9 @@ import path from 'path'
 import commonjs from 'rollup-plugin-commonjs'
 import json from 'rollup-plugin-json'
 import alias from 'rollup-plugin-alias'
-import minify from 'rollup-plugin-babel-minify'
+// import minify from 'rollup-plugin-babel-minify'
 import { name, version, author } from './package.json'
+import resolve from 'rollup-plugin-node-resolve'
 
 const fromSrc = (...paths) => {
   return path.join(__dirname, 'src', ...paths)
@@ -11,11 +12,8 @@ const fromSrc = (...paths) => {
 
 const plugins = [
   alias({
-    pleasure: __dirname,
-    lib: fromSrc('lib'),
-    api: fromSrc('api'),
-    ddocs: fromSrc('ddocs'),
-    ui: fromSrc('ui')
+    src: fromSrc(),
+    lib: fromSrc('lib')
   }),
   json(),
   commonjs({
@@ -38,15 +36,15 @@ const banner = `/*!
 
 export default [
   {
-    input: 'src/lib/pleasure.js',
+    input: 'src/index.js',
     output: [
       {
-        file: 'dist/pleasure.js',
+        file: 'dist/pleasure-api.js',
         format: 'cjs',
         banner
       },
       {
-        file: 'dist/pleasure.esm.js',
+        file: 'dist/pleasure-api.esm.js',
         format: 'esm',
         banner
       }

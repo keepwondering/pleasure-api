@@ -1,4 +1,3 @@
-import { getConfig } from 'lib/get-config'
 import merge from 'lodash/merge'
 import moment from 'moment'
 import { sign } from './jwt-token.js'

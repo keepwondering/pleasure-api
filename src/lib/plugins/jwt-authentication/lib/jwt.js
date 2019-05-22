@@ -4,7 +4,6 @@ import moment from 'moment'
 
 import { sign as jwtSign, revoke as jwtRevoke, verify as jwtVerify, isRevoked as jwtIsRevoked } from './jwt-token'
 import hash from 'object-hash'
-import { getConfig } from 'lib/get-config.js'
 
 // const { appLogger } = require('./log')
 

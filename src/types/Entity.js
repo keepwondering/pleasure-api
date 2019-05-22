@@ -33,10 +33,6 @@
  * `(model, entities)`. `model` being the instance of the mongoose model created and `entities` the {PleasureEntityMap}.
  * object of all created entities. {@tutorial hooks/model-created}
  * @property {ApiAccess} [access] - Access setup for this entity.
- * @property {Object} [flux] - Optional configuration for the flux-pattern delivery.
- * @property {Function} flux.getDeliveryGroup - Function called with the JWT user in session (if any, null otherwise)
- * that must resolve a {String} indicating the delivery group for the flux-pattern functionality. If none present will
- * default to `(auth) => { auth.level  || 'global' }`
  *
  * @see [mongoose](https://mongoosejs.com)
  * @see [mongoose Schemas](https://mongoosejs.com)
@@ -46,96 +42,4 @@ export default {
   name: null,
   discriminator: null,
   extend: null,
-  flux: {
-    access: {
-      /**
-       * @callback Entity#flux#access#create
-       * @param entry - The mongoose entry
-       *
-       * Called every time an entry that belongs to the entity is created. Must return an array indicating the
-       * group of clients that should get notified. `true` for all, `false` for none. Defaults to `true`.
-       *
-       * @return {String[]|Boolean} - Defaults to `['admin']`
-       */
-      create ({ entry }) {
-        return ['admin']
-      },
-      /**
-       * @callback Entity#flux#access#update
-       * @param entry - The mongoose entry
-       * @param entry.$before - The state of the entry before the update
-       * @param entry.$after - The state of the entry after the update
-       *
-       * Called every time an entry that belongs to the entity is updated. Must return an array indicating the
-       * group of clients that should get notified. `true` for all, `false` for none.
-       *
-       * @return {String[]|Boolean} - Defaults to `['admin']`
-       */
-      update ({ entry }) {
-        return ['admin']
-      },
-      /**
-       * @callback Entity#flux#access#delete
-       * @param {Object} entry - The mongoose entry being deleted
-       *
-       * Called every time an entry that belongs to the entity is deleted. Must return an array indicating the
-       * group of clients that should get notified. `true` for all, `false` for none.
-       *
-       * @return {String[]|Boolean} - Defaults to `['admin']`
-       */
-      delete ({ entry }) {
-        return ['admin']
-      },
-      /**
-       * @callback Entity#flux#access#updateMany
-       * @param {Object[]} entries - Array with the entries being updated
-       *
-       * Called every time a bulk update is performed, e.g.
-       * `pleasureClient.update('product', ['id1', 'id2'], {...})`.
-       *
-       * Must return an array indicating the group of clients that should get notified. `true` for all, `false`
-       * for none.
-       *
-       * @return {String[]|Boolean} - Defaults to `['admin']`
-       */
-      updateMany ({ entries }) {
-        return ['admin']
-      },
-      /**
-       * @callback Entity#flux#access#deleteMany
-       * @param {Object[]} entries - Array with the entries being deleted
-       *
-       * Called every time a bulk delete is performed, for example, by using the  that belongs to the entity is
-       * deleted. Must return an array indicating the group of clients that should get notified. `true` for all, `false`
-       * for none.
-       *
-       * @return {String[]|Boolean} - Defaults to `['admin']`
-       */
-      deleteMany ({ entries }) {
-        return ['admin']
-      }
-    },
-    payload: {
-      /**
-       * @callback Entity#flux#payload#create
-       * @param {String} group - Array with the entries being deleted
-       * @param {Object} entry - The entry being created.
-       *
-       * Called every time an entry is created.
-       * deleted. Must return an array indicating the group of clients that should get notified. `true` for all, `false`
-       * for none. Defaults to `true`.
-       *
-       * @return {Object} - The payload that must be return to the `group`.
-       */
-      create ({ group, entry }) {
-        return entry
-      },
-      update ({ entry }) {
-        return entry
-      },
-      delete ({ entry }) {
-        return entry
-      }
-    }
-  }
 }

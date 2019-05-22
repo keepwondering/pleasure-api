@@ -62,7 +62,7 @@ export function pleasureApi (config = {}, server) {
   })
 
   const { prepare, extend, plugins, pluginsApi, pluginsConfig } = getPlugins(config)
-  const mainPayload = { router, pluginsApi, server, pluginsConfig, getEntities }
+  const mainPayload = { router, pluginsApi, server, pluginsConfig, getEntities, getConfig }
 
   const pluginRouter = ({ cb, config }) => {
     return cb(Object.assign({}, mainPayload, { config }))

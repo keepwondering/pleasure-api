@@ -6642,9 +6642,9 @@ platform@1.3.5:
   resolved "https://registry.yarnpkg.com/platform/-/platform-1.3.5.tgz#fb6958c696e07e2918d2eeda0f0bc9448d733444"
   integrity sha512-TuvHS8AOIZNAlE77WUDiR4rySV/VMptyMfcfeoMgs4P8apaZM3JrnbzBiixKUv+XR6i+BXrQh8WAnjaSPFO65Q==
 
-pleasure-client@keepwondering/pleasure-api-client#v1-beta:
+pleasure-api-client@keepwondering/pleasure-api-client#v1-beta:
   version "1.0.0-beta"
-  resolved "https://codeload.github.com/keepwondering/pleasure-api-client/tar.gz/9e863d6b5025cac918cfb986f3663b2ae41f294f"
+  resolved "https://codeload.github.com/keepwondering/pleasure-api-client/tar.gz/374e67f82aa51a75ac911e74774badae7977c333"
   dependencies:
     axios "^0.18.0"
     bluebird "^3.5.4"
@@ -6654,6 +6654,13 @@ pleasure-client@keepwondering/pleasure-api-client#v1-beta:
     object-hash "^1.3.1"
     qs "^6.7.0"
     socket.io-client "^2.2.0"
+
+pleasure-bundle-boilerplate@keepwondering/pleasure-api-plugin-socket-io#v1-beta:
+  version "1.0.0-beta"
+  resolved "https://codeload.github.com/keepwondering/pleasure-api-plugin-socket-io/tar.gz/e15b3f52e1034c72f54a9b50d392267595b6aafc"
+  dependencies:
+    lodash "^4.17.11"
+    socket.io "^2.2.0"
 
 plur@^3.0.1:
   version "3.1.1"

@@ -19,6 +19,9 @@ let pleasureEntityModelMap = null
 let permissions = null
 
 export default {
+  config: {
+
+  },
   name: 'crud',
   prepare ({ router, getEntities }) {
 

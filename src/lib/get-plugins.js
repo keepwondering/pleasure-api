@@ -1,6 +1,6 @@
 import helmet from './plugins/helmet'
 import pleasureContext from './plugins/pleasure-context'
-import jwtAuthentication from './plugins/jwt-authentication'
+import jwtAuthentication from 'pleasure-api-plugin-jwt'
 import schemas from './plugins/schemas'
 import socketIo from './plugins/socket-io'
 import fluxPattern from './plugins/flux-pattern'

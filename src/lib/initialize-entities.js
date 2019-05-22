@@ -1,11 +1,10 @@
 import { getPleasureEntityMap } from './get-pleasure-entity-map.js'
-import { getMongoose } from 'src/lib/utils/get-mongoose'
+import { getMongoose } from 'src/lib/get-mongoose'
 import { Schema } from 'mongoose'
 import merge from 'deepmerge'
 import defaults from 'lodash/defaults'
 import { EventBus } from 'pleasure-utils'
 import Entity from 'src/types/Entity'
-import ApiAccess from 'src/lib/plugins/router/types/ApiAccess'
 
 export async function initializeEntities () {
   const { emit } = EventBus()

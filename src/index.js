@@ -11,6 +11,7 @@ import { getPermissions } from 'lib/plugins/router/lib/get-permissions'
 import { getPlugins } from 'lib/get-plugins'
 import mongoose from 'mongoose'
 import { getConfig } from 'lib/get-config.js'
+import { getMongoose } from './lib/get-mongoose'
 
 /**
  * RESTful API
@@ -18,6 +19,7 @@ import { getConfig } from 'lib/get-config.js'
  */
 
 export {
+  getMongoose,
   getConfig,
   getMongoCredentials,
   getEntities,

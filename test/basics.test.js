@@ -1,11 +1,11 @@
 import test from 'ava'
-import apiDriver from '../tools/api-driver'
 import _ from 'lodash'
 import { expect } from 'chai'
-import { PleasureClient, getConfig, api } from '../../' // pleasure
-import '../tools/web-server.js'
+import { PleasureApiClient } from 'pleasure-api-client' // pleasure
+import { getConfig, getPleasureEntityMap, getPermissions, getEntities } from '../' // pleasure-api
+import './utils/web-server.js'
 
-const pleasureClient = PleasureClient.instance()
+const pleasureClient = PleasureApiClient.instance()
 
 let dummyUser
 
@@ -20,7 +20,7 @@ test.beforeEach(async t => {
 })
 
 test(`Read PleasureEntity from config.api.entitiesPath`, async t => {
-  const PleasureEntityMap = await api.getPleasureEntityMap()
+  const PleasureEntityMap = await getPleasureEntityMap()
 
   t.deepEqual(Object.keys(PleasureEntityMap).sort(), testEntities)
 
@@ -37,30 +37,29 @@ test(`Read PleasureEntity from config.api.entitiesPath`, async t => {
     }
   })
 
-  t.log(`Schemas loaded from ${getConfig().api.entitiesPath}`)
+  t.log(`Schemas loaded from ${ getConfig().entitiesPath }`)
 })
 
 test(`Initializes 'PleasureEntities' as mongodb collections`, async t => {
-  const { entities } = await api.getEntities()
+  const { entities } = await getEntities()
 
   t.deepEqual(Object.keys(entities).sort(), testEntities)
 
-  t.log(`Entities loaded from ${getConfig().api.entitiesPath}`)
+  t.log(`Entities loaded from ${ getConfig().entitiesPath }`)
 })
 
 /**
  * Extending an entity means using mongoose discriminators
  */
 test(`Extends entities model and controller`, async t => {
-  const { provider, user } = await api.getPermissions()
+  const { schemas } = await getEntities()
+  const { provider, user } = getPermissions(schemas)
   t.is(provider.create, user.create)
 })
 
 test(`Exposes entities via http`, async t => {
   // load schemas from api server
-  const entities = await apiDriver({
-    url: '/schemas'
-  })
+  const entities = await pleasureClient.list('schemas')
 
   t.deepEqual(Object.keys(entities).sort(), testEntities)
 

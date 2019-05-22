@@ -3,6 +3,7 @@ import { expect } from 'chai'
 import { PleasureApiClient } from 'pleasure-api-client'
 import './utils/web-server.js'
 import 'pleasure-core-dev-tools/test/clean-db-per-test.js'
+import { adminLogin } from 'pleasure-core-dev-tools/test/admin-login.js'
 
 const pleasureApiClient = PleasureApiClient.instance()
 
@@ -73,6 +74,7 @@ test(`Reads entries by id from entities`, async t => {
 })
 
 test(`Updates entries by id`, async t => {
+  await adminLogin()
   const newFullName = 'Olivia'
   const entry = await pleasureApiClient.update(`user`, dummyUser._id, {
     fullName: newFullName
@@ -87,6 +89,7 @@ test(`Updates entries by id`, async t => {
 })
 
 test(`Deletes entries by id`, async t => {
+  await adminLogin()
   const entry = await pleasureApiClient.create(`user`, {
     fullName: `Ana Sosa`,
     email: 'acsosa@gmail.com',
@@ -106,6 +109,7 @@ test(`Deletes entries by id`, async t => {
 })
 
 test(`Deletes multiple entries by query`, async t => {
+  await adminLogin()
   const entry = await pleasureApiClient.create(`user`, {
     fullName: `Ana Sosa`,
     email: 'acsosa@gmail.com',
@@ -125,6 +129,7 @@ test(`Deletes multiple entries by query`, async t => {
 })
 
 test(`Deletes multiple entries by complex queries (regex)`, async t => {
+  await adminLogin()
   const entry = await pleasureApiClient.create(`user`, {
     fullName: `Ana Sosa`,
     email: 'acsosa@gmail.com',
@@ -144,6 +149,7 @@ test(`Deletes multiple entries by complex queries (regex)`, async t => {
 })
 
 test(`Deletes multiple entries at once, by id`, async t => {
+  await adminLogin()
   const entry1 = await pleasureApiClient.create(`user`, {
     fullName: `Ana Sosa`,
     email: 'acsosa@gmail.com',

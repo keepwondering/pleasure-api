@@ -4,6 +4,7 @@ let entities = null
 let schemas = null
 let initializing
 const finish = []
+const rejects = []
 
 /**
  * @function getEntities
@@ -22,15 +23,21 @@ export async function getEntities () {
   }
 
   if (initializing) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      rejects.push(reject)
       finish.push(resolve)
     })
   }
 
   initializing = true
-  const { entities: theEntities, schemas: theSchemas } = await initializeEntities()
+  const toC = setTimeout(() => {
+    rejects.forEach(r => r(new Error(`Entity creation timeout`)))
+  }, 3000)
+  const { entities: theEntities, schemas: theSchemas } = await initializeEntities() //todo: check why not resolving
   entities = theEntities
   schemas = theSchemas
+
+  clearTimeout(toC)
 
   finish.forEach(resolve => resolve({ entities, schemas }))
 

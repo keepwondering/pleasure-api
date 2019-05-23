@@ -37,7 +37,7 @@ test(`Socket.io connects`, async t => {
 })
 
 test(`Informs when creating an entry in an entity`, async t => {
-  await adminLogin()
+  await t.notThrowsAsync(adminLogin)
 
   await waitForSocketConnection()
   const newProduct = {

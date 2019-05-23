@@ -1,5 +1,5 @@
 import Router from 'koa-router'
-import { getConfig } from './get-config.js'
+import { getConfig, setConfig } from './get-config.js'
 import { getMongoose } from './get-mongoose.js'
 import mongoose from 'mongoose'
 import { getPlugins } from './get-plugins.js'
@@ -55,10 +55,11 @@ import merge from 'deepmerge'
  * ```
  */
 
-export function pleasureApi (config = {}, server) {
+export function pleasureApi (config, server) {
+  // set default config
+  const { prefix } = setConfig(getConfig(config))
   const { on } = EventBus()
 
-  const { prefix } = getConfig(config)
   const router = Router({
     prefix
   })

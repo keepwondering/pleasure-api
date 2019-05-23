@@ -1,6 +1,35 @@
 import { packageJson, getConfig as _getConfig } from 'pleasure-utils'
 import kebabCase from 'lodash/kebabCase'
 import merge from 'deepmerge'
+import Promise from 'bluebird'
+
+const { name } = packageJson()
+
+let init
+
+let _default = {
+  prefix: '/api',
+  port: 3000,
+  collectionListLimit: 100,
+  collectionMaxListLimit: 300,
+  mongodb: {
+    host: 'localhost',
+    port: 27017,
+    database: kebabCase(name),
+    username: null,
+    password: null,
+    driverOptions: {
+      autoIndex: true,
+      reconnectTries: Number.MAX_VALUE,
+      reconnectInterval: 500,
+      promiseLibrary: Promise,
+      poolSize: 5,
+      useNewUrlParser: true
+    }
+  },
+  entitiesPath: 'api', // relative to <project-root>
+  entitiesUri: '/entities'
+}
 
 /**
  * @typedef {Array} TimeUnit
@@ -53,28 +82,13 @@ import merge from 'deepmerge'
  * @return {API.ApiConfig}
  */
 export function getConfig (override = {}) {
-  const { name } = packageJson()
-  return merge({
-    prefix: '/api',
-    port: 3000,
-    collectionListLimit: 100,
-    collectionMaxListLimit: 300,
-    mongodb: {
-      host: 'localhost',
-      port: 27017,
-      database: kebabCase(name),
-      username: null,
-      password: null,
-      driverOptions: {
-        autoIndex: true,
-        reconnectTries: Number.MAX_VALUE,
-        reconnectInterval: 500,
-        promiseLibrary: require('bluebird'),
-        poolSize: 5,
-        useNewUrlParser: true
-      }
-    },
-    entitiesPath: 'api', // relative to <project-root>
-    entitiesUri: '/entities'
-  }, _getConfig('api', override))
+  if (init) {
+    return init
+  }
+
+  return merge(_default, _getConfig('api', override))
+}
+
+export function setConfig (config) {
+  return init = config
 }

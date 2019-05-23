@@ -9,7 +9,7 @@
   "scripts": {
     "build": "rollup -c rollup.config.js",
     "build:live": "nodemon -w src --exec yarn build",
-    "test": "API_ERROR=true PLEASURE_ROOT=/Users/tin/projects/pleasure-api/test/fixtures/project NODE_ENV=test ava --verbose --serial"
+    "test": "API_ERROR=true PLEASURE_ROOT=$(pwd)/test/fixtures/pleasure-dummy-project NODE_ENV=test ava --verbose --serial"
   },
   "devDependencies": {
     "ava": "^1.4.1",

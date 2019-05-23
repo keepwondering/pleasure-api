@@ -49,6 +49,7 @@
     "pleasure-api-plugin-flux": "keepwondering/pleasure-api-plugin-flux#v1-beta",
     "pleasure-api-plugin-jwt": "keepwondering/pleasure-api-plugin-jwt#v1-beta",
     "pleasure-api-plugin-socket-io": "keepwondering/pleasure-api-plugin-socket-io#v1-beta",
+    "pleasure-utils": "keepwondering/pleasure-utils#v1-beta",
     "qs": "^6.7.0",
     "rollup-plugin-node-resolve": "^5.0.0",
     "socket.io": "^2.2.0"

@@ -1,5 +1,7 @@
 import Router from 'koa-router'
 import { getConfig } from './get-config.js'
+import { getMongoose } from './get-mongoose.js'
+import mongoose from 'mongoose'
 import { getPlugins } from './get-plugins.js'
 import { EventBus } from 'pleasure-utils'
 import { getEntities } from './get-entities'
@@ -62,7 +64,16 @@ export function pleasureApi (config = {}, server) {
   })
 
   const { prepare, extend, plugins, pluginsApi, pluginsConfig } = getPlugins(config)
-  const mainPayload = { router, pluginsApi, server, pluginsConfig, getEntities, getConfig }
+  const mainPayload = {
+    mongoose,
+    mongooseApi: getMongoose(),
+    router,
+    pluginsApi,
+    server,
+    pluginsConfig,
+    getEntities,
+    getConfig
+  }
 
   const pluginRouter = ({ cb, config }) => {
     return cb(Object.assign({}, mainPayload, { config }))

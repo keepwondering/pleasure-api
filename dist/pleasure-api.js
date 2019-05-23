@@ -12,6 +12,7 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 var pleasureUtils = require('pleasure-utils');
 var kebabCase = _interopDefault(require('lodash/kebabCase'));
 var merge = _interopDefault(require('deepmerge'));
+var Promise$1 = _interopDefault(require('bluebird'));
 var path = _interopDefault(require('path'));
 var mongoose = require('mongoose');
 var mongoose__default = _interopDefault(mongoose);
@@ -34,7 +35,6 @@ var deepObjectDiff = require('deep-object-diff');
 var size = _interopDefault(require('lodash/size'));
 var pleasureApiClient = require('pleasure-api-client');
 var dot = _interopDefault(require('dot-object'));
-var Promise$1 = _interopDefault(require('bluebird'));
 var forEach = _interopDefault(require('lodash/forEach'));
 var castArray = _interopDefault(require('lodash/castArray'));
 var compact = _interopDefault(require('lodash/compact'));
@@ -45,6 +45,34 @@ var fs = _interopDefault(require('fs'));
 var querystring = _interopDefault(require('querystring'));
 var tar = _interopDefault(require('tar'));
 var rimraf = _interopDefault(require('rimraf'));
+
+const { name } = pleasureUtils.packageJson();
+
+let init;
+
+let _default = {
+  prefix: '/api',
+  port: 3000,
+  collectionListLimit: 100,
+  collectionMaxListLimit: 300,
+  mongodb: {
+    host: 'localhost',
+    port: 27017,
+    database: kebabCase(name),
+    username: null,
+    password: null,
+    driverOptions: {
+      autoIndex: true,
+      reconnectTries: Number.MAX_VALUE,
+      reconnectInterval: 500,
+      promiseLibrary: Promise$1,
+      poolSize: 5,
+      useNewUrlParser: true
+    }
+  },
+  entitiesPath: 'api', // relative to <project-root>
+  entitiesUri: '/entities'
+};
 
 /**
  * @typedef {Array} TimeUnit
@@ -97,30 +125,15 @@ var rimraf = _interopDefault(require('rimraf'));
  * @return {API.ApiConfig}
  */
 function getConfig (override = {}) {
-  const { name } = pleasureUtils.packageJson();
-  return merge({
-    prefix: '/api',
-    port: 3000,
-    collectionListLimit: 100,
-    collectionMaxListLimit: 300,
-    mongodb: {
-      host: 'localhost',
-      port: 27017,
-      database: kebabCase(name),
-      username: null,
-      password: null,
-      driverOptions: {
-        autoIndex: true,
-        reconnectTries: Number.MAX_VALUE,
-        reconnectInterval: 500,
-        promiseLibrary: require('bluebird'),
-        poolSize: 5,
-        useNewUrlParser: true
-      }
-    },
-    entitiesPath: 'api', // relative to <project-root>
-    entitiesUri: '/entities'
-  }, pleasureUtils.getConfig('api', override))
+  if (init) {
+    return init
+  }
+
+  return merge(_default, pleasureUtils.getConfig('api', override))
+}
+
+function setConfig (config) {
+  return init = config
 }
 
 /**
@@ -453,8 +466,7 @@ async function initializeEntities () {
     fn(entities);
   });
 
-  emit('pleasure-entity-map', pleasureEntityMap);
-
+  emit('pleasure-entity-map', pleasureEntityMap); // todo: check why emit hanging
   return { entities, schemas: pleasureEntityMap }
 }
 
@@ -462,6 +474,7 @@ let entities = null;
 let schemas = null;
 let initializing;
 const finish = [];
+const rejects = [];
 
 /**
  * @function getEntities
@@ -480,15 +493,21 @@ async function getEntities () {
   }
 
   if (initializing) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      rejects.push(reject);
       finish.push(resolve);
     })
   }
 
   initializing = true;
-  const { entities: theEntities, schemas: theSchemas } = await initializeEntities();
+  const toC = setTimeout(() => {
+    rejects.forEach(r => r(new Error(`Entity creation timeout`)));
+  }, 3000);
+  const { entities: theEntities, schemas: theSchemas } = await initializeEntities(); //todo: check why not resolving
   entities = theEntities;
   schemas = theSchemas;
+
+  clearTimeout(toC);
 
   finish.forEach(resolve => resolve({ entities, schemas }));
 
@@ -1327,16 +1346,26 @@ function getPlugins (configOverride) {
  * ```
  */
 
-function pleasureApi (config = {}, server) {
+function pleasureApi (config, server) {
+  // set default config
+  const { prefix } = setConfig(getConfig(config));
   const { on } = pleasureUtils.EventBus();
 
-  const { prefix } = getConfig(config);
   const router = Router({
     prefix
   });
 
   const { prepare, extend, plugins, pluginsApi, pluginsConfig } = getPlugins(config);
-  const mainPayload = { router, pluginsApi, server, pluginsConfig, getEntities, getConfig };
+  const mainPayload = {
+    mongoose: mongoose__default,
+    mongooseApi: getMongoose(),
+    router,
+    pluginsApi,
+    server,
+    pluginsConfig,
+    getEntities,
+    getConfig
+  };
 
   const pluginRouter = ({ cb, config }) => {
     return cb(Object.assign({}, mainPayload, { config }))
@@ -1586,7 +1615,7 @@ function drop (credentials = {}) {
     connection.on('connected', () => {
       connection.dropDatabase((err, res) => {
         if (err) {
-          return reject(new Error(`Error dropping db: ${err}`))
+          return reject(new Error(`Error dropping db: ${ err }`))
         }
 
         // console.log(`Database ${ getMongoCredentials().database } dropped!`)

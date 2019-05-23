@@ -6,6 +6,7 @@
 import { packageJson, getConfig as getConfig$1, readdirAsync, findRoot, EventBus } from 'pleasure-utils';
 import kebabCase from 'lodash/kebabCase';
 import merge from 'deepmerge';
+import Promise$1 from 'bluebird';
 import path from 'path';
 import mongoose, { Schema, Types } from 'mongoose';
 export { default as mongoose } from 'mongoose';
@@ -29,7 +30,6 @@ import size from 'lodash/size';
 import { ApiError } from 'pleasure-api-client';
 export { ApiError } from 'pleasure-api-client';
 import dot from 'dot-object';
-import Promise$1 from 'bluebird';
 import forEach from 'lodash/forEach';
 import castArray from 'lodash/castArray';
 import compact from 'lodash/compact';
@@ -40,6 +40,34 @@ import fs from 'fs';
 import querystring from 'querystring';
 import tar from 'tar';
 import rimraf from 'rimraf';
+
+const { name } = packageJson();
+
+let init;
+
+let _default = {
+  prefix: '/api',
+  port: 3000,
+  collectionListLimit: 100,
+  collectionMaxListLimit: 300,
+  mongodb: {
+    host: 'localhost',
+    port: 27017,
+    database: kebabCase(name),
+    username: null,
+    password: null,
+    driverOptions: {
+      autoIndex: true,
+      reconnectTries: Number.MAX_VALUE,
+      reconnectInterval: 500,
+      promiseLibrary: Promise$1,
+      poolSize: 5,
+      useNewUrlParser: true
+    }
+  },
+  entitiesPath: 'api', // relative to <project-root>
+  entitiesUri: '/entities'
+};
 
 /**
  * @typedef {Array} TimeUnit
@@ -92,30 +120,15 @@ import rimraf from 'rimraf';
  * @return {API.ApiConfig}
  */
 function getConfig (override = {}) {
-  const { name } = packageJson();
-  return merge({
-    prefix: '/api',
-    port: 3000,
-    collectionListLimit: 100,
-    collectionMaxListLimit: 300,
-    mongodb: {
-      host: 'localhost',
-      port: 27017,
-      database: kebabCase(name),
-      username: null,
-      password: null,
-      driverOptions: {
-        autoIndex: true,
-        reconnectTries: Number.MAX_VALUE,
-        reconnectInterval: 500,
-        promiseLibrary: require('bluebird'),
-        poolSize: 5,
-        useNewUrlParser: true
-      }
-    },
-    entitiesPath: 'api', // relative to <project-root>
-    entitiesUri: '/entities'
-  }, getConfig$1('api', override))
+  if (init) {
+    return init
+  }
+
+  return merge(_default, getConfig$1('api', override))
+}
+
+function setConfig (config) {
+  return init = config
 }
 
 /**
@@ -448,8 +461,7 @@ async function initializeEntities () {
     fn(entities);
   });
 
-  emit('pleasure-entity-map', pleasureEntityMap);
-
+  emit('pleasure-entity-map', pleasureEntityMap); // todo: check why emit hanging
   return { entities, schemas: pleasureEntityMap }
 }
 
@@ -457,6 +469,7 @@ let entities = null;
 let schemas = null;
 let initializing;
 const finish = [];
+const rejects = [];
 
 /**
  * @function getEntities
@@ -475,15 +488,21 @@ async function getEntities () {
   }
 
   if (initializing) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      rejects.push(reject);
       finish.push(resolve);
     })
   }
 
   initializing = true;
-  const { entities: theEntities, schemas: theSchemas } = await initializeEntities();
+  const toC = setTimeout(() => {
+    rejects.forEach(r => r(new Error(`Entity creation timeout`)));
+  }, 3000);
+  const { entities: theEntities, schemas: theSchemas } = await initializeEntities(); //todo: check why not resolving
   entities = theEntities;
   schemas = theSchemas;
+
+  clearTimeout(toC);
 
   finish.forEach(resolve => resolve({ entities, schemas }));
 
@@ -1322,16 +1341,26 @@ function getPlugins (configOverride) {
  * ```
  */
 
-function pleasureApi (config = {}, server) {
+function pleasureApi (config, server) {
+  // set default config
+  const { prefix } = setConfig(getConfig(config));
   const { on } = EventBus();
 
-  const { prefix } = getConfig(config);
   const router = Router({
     prefix
   });
 
   const { prepare, extend, plugins, pluginsApi, pluginsConfig } = getPlugins(config);
-  const mainPayload = { router, pluginsApi, server, pluginsConfig, getEntities, getConfig };
+  const mainPayload = {
+    mongoose,
+    mongooseApi: getMongoose(),
+    router,
+    pluginsApi,
+    server,
+    pluginsConfig,
+    getEntities,
+    getConfig
+  };
 
   const pluginRouter = ({ cb, config }) => {
     return cb(Object.assign({}, mainPayload, { config }))
@@ -1581,7 +1610,7 @@ function drop (credentials = {}) {
     connection.on('connected', () => {
       connection.dropDatabase((err, res) => {
         if (err) {
-          return reject(new Error(`Error dropping db: ${err}`))
+          return reject(new Error(`Error dropping db: ${ err }`))
         }
 
         // console.log(`Database ${ getMongoCredentials().database } dropped!`)

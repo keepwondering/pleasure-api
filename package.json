@@ -21,7 +21,8 @@
     "rollup-plugin-alias": "^1.5.1",
     "rollup-plugin-babel-minify": "^8.0.0",
     "rollup-plugin-commonjs": "^10.0.0",
-    "rollup-plugin-json": "^4.0.0"
+    "rollup-plugin-json": "^4.0.0",
+    "pleasure": "keepwondering/pleasure#v1-beta"
   },
   "dependencies": {
     "bluebird": "^3.5.4",
@@ -53,8 +54,5 @@
     "qs": "^6.7.0",
     "rollup-plugin-node-resolve": "^5.0.0",
     "socket.io": "^2.2.0"
-  },
-  "peerDependencies": {
-    "pleasure": "keepwondering/pleasure#v1-beta"
   }
 }

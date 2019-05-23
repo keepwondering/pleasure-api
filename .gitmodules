@@ -1,0 +1,4 @@
+[submodule "test/fixtures/pleasure-dummy-project"]
+	path = test/fixtures/pleasure-dummy-project
+	url = https://github.com/keepwondering/pleasure-dummy-project.git
+	branch = v1-beta

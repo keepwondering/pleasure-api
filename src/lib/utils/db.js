@@ -11,7 +11,7 @@ export function drop (credentials = {}) {
     connection.on('connected', () => {
       connection.dropDatabase((err, res) => {
         if (err) {
-          return reject(new Error(`Error dropping db: ${err}`))
+          return reject(new Error(`Error dropping db: ${ err }`))
         }
 
         // console.log(`Database ${ getMongoCredentials().database } dropped!`)

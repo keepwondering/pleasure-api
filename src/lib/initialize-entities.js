@@ -117,7 +117,6 @@ export async function initializeEntities () {
     fn(entities)
   })
 
-  emit('pleasure-entity-map', pleasureEntityMap)
-
+  emit('pleasure-entity-map', pleasureEntityMap) // todo: check why emit hanging
   return { entities, schemas: pleasureEntityMap }
 }

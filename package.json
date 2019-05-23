@@ -16,6 +16,7 @@
     "chai": "^4.2.0",
     "nodemon": "^1.19.0",
     "pleasure-api-client": "keepwondering/pleasure-api-client#v1-beta",
+    "pleasure-core-dev-tools": "keepwondering/pleasure-core-dev-tools#v1-beta",
     "rollup": "^1.12.3",
     "rollup-plugin-alias": "^1.5.1",
     "rollup-plugin-babel-minify": "^8.0.0",
@@ -48,7 +49,6 @@
     "pleasure-api-plugin-flux": "keepwondering/pleasure-api-plugin-flux#v1-beta",
     "pleasure-api-plugin-jwt": "keepwondering/pleasure-api-plugin-jwt#v1-beta",
     "pleasure-api-plugin-socket-io": "keepwondering/pleasure-api-plugin-socket-io#v1-beta",
-    "pleasure-core-dev-tools": "keepwondering/pleasure-core-dev-tools#v1-beta",
     "qs": "^6.7.0",
     "rollup-plugin-node-resolve": "^5.0.0",
     "socket.io": "^2.2.0"

@@ -3,7 +3,7 @@
  * (c) 2018-2019 Martin Rafael Gonzalez <tin@devtin.io>
  * Released under the MIT License.
  */
-import { packageJson, getConfig as getConfig$1, readdirAsync, findRoot, EventBus } from 'pleasure-utils';
+import { packageJson, getConfig as getConfig$1, extendConfig, readdirAsync, findRoot, EventBus } from 'pleasure-utils';
 import kebabCase from 'lodash/kebabCase';
 import merge from 'deepmerge';
 import Promise$1 from 'bluebird';
@@ -40,6 +40,12 @@ import fs from 'fs';
 import querystring from 'querystring';
 import tar from 'tar';
 import rimraf from 'rimraf';
+import { printCommandsIndex } from 'pleasure-cli';
+import Koa from 'koa';
+import koaBody from 'koa-body';
+import { Nuxt, Builder } from 'nuxt';
+import { get as get$1 } from 'lodash';
+import chokidar from 'chokidar';
 
 const { name } = packageJson();
 
@@ -124,8 +130,10 @@ function getConfig (override = {}) {
     return init
   }
 
-  return merge(_default, getConfig$1('api', override))
+  return merge(_default, getConfig$1('api', override, false, false))
 }
+
+extendConfig('api', getConfig);
 
 function setConfig (config) {
   return init = config
@@ -1650,4 +1658,172 @@ var index$2 = {
   parseNumberAndBoolean
 };
 
-export { index as MongooseTypes, getConfig, getEntities, getMongoConnection, getMongoCredentials, getMongoose, getPermissions, getPleasureEntityMap, getPlugins, initializeEntities, pleasureApi, index$1 as plugins, index$2 as utils };
+let runningConnection;
+let runningBuilder;
+let runningPort;
+let runningWatcher;
+
+const nuxtConfigFile = findRoot('./nuxt.config.js');
+const pleasureConfigFile = findRoot('./pleasure.config.js');
+
+function watcher () {
+  if (runningWatcher) {
+    runningWatcher.close();
+    runningWatcher = null;
+  }
+
+  // delete cache
+  delete require.cache[require.resolve(nuxtConfigFile)];
+  delete require.cache[require.resolve(pleasureConfigFile)];
+
+  const { watchForRestart = [] } = getConfig$1('ui');
+  const cacheClean = [nuxtConfigFile, pleasureConfigFile].concat(watchForRestart);
+  runningWatcher = chokidar.watch(cacheClean, { ignored: /(^|[\/\\])\../, ignoreInitial: true });
+
+  runningWatcher.on('all', (event, path) => {
+    // todo: trigger restart
+    restart()
+      .catch(err => {
+        console.log(`restarting failed with error`, err.message);
+      });
+  });
+}
+
+async function start (port) {
+  if (runningConnection) {
+    console.error(`An app is already running`);
+    return
+  }
+
+  // delete cache
+  delete require.cache[require.resolve(nuxtConfigFile)];
+  delete require.cache[require.resolve(findRoot('./pleasure.config.js'))];
+
+  const apiConfig = getConfig$1('api');
+  console.log({ apiConfig });
+  port = port || apiConfig.port;
+
+  let withNuxt = false;
+  let nuxt;
+
+  // enable nuxt
+  if (fs.existsSync(nuxtConfigFile)) {
+    withNuxt = true;
+    let nuxtConfig = require(nuxtConfigFile);
+
+    const currentModules = nuxtConfig.modules = get$1(nuxtConfig, 'modules', []);
+    const currentModulesDir = nuxtConfig.modulesDir = get$1(nuxtConfig, 'modulesDir', []);
+    //console.log({ currentModulesDir })
+    currentModulesDir.push(...require.main.paths.filter(p => {
+      return currentModulesDir.indexOf(p) < 0
+    }));
+    //console.log({ currentModulesDir })
+    const ui = ['pleasure-ui-nuxt', {
+      root: findRoot(),
+      name: packageJson().name,
+      config: getConfig$1('ui'),
+      pleasureRoot: path.join(__dirname, '..')
+    }];
+    currentModules.push(ui);
+
+    //console.log({ nuxtConfig })
+    nuxt = new Nuxt(nuxtConfig);
+
+    // Build in development
+    if (nuxtConfig.dev) {
+      const builder = new Builder(nuxt);
+      runningBuilder = builder;
+      await builder.build();
+    }
+  }
+
+  const app = new Koa();
+
+  app.use(koaBody());
+
+  const server = runningConnection = app.listen(port);
+  runningPort = port;
+
+  app.use(pleasureApi({
+    prefix: apiConfig.prefix,
+    plugins: apiConfig.plugins
+  }, server));
+
+  // nuxt
+  if (withNuxt) {
+    app.use(ctx => {
+      ctx.status = 200;
+      ctx.respond = false; // Mark request as handled for Koa
+      ctx.req.ctx = ctx; // This might be useful later on, e.g. in nuxtServerInit or with nuxt-stash
+      nuxt.render(ctx.req, ctx.res);
+    });
+  }
+
+  process.send && process.send('pleasure-ready');
+
+  watcher();
+
+  return port
+}
+
+async function restart () {
+  if (!runningPort || !runningConnection) {
+    console.error(`No app instance running`);
+    return
+  }
+
+  if (runningBuilder) {
+    await runningBuilder.close();
+    runningBuilder = null;
+  }
+
+  runningConnection.close();
+  runningConnection = null;
+  start(runningPort);
+}
+
+const cli = {
+  root: {
+    command () {
+      printCommandsIndex(cli.commands);
+    }
+  },
+  commands: [
+    {
+      name: 'start',
+      help: 'starts the app in production',
+      command: function foo (args) {
+        console.log('go start the server!', { args });
+        start()
+          .then((port) => {
+            console.log(`Pleasure running on ${ port }`);
+            process.emit('pleasure-initialized');
+          });
+      }
+    },
+    {
+      name: 'bar',
+      help: 'an order you must obey!!',
+      command: function bar (args) {
+        console.log('go to the bar (:', { args });
+      }
+    }
+  ]
+};
+
+/**
+ * @see {@link https://github.com/maxogden/subcommand}
+ */
+function cli$1 (subcommand) {
+  return {
+    name: 'app',
+    help: 'app options',
+    command ({ _: args }) {
+      // console.log(`calling app`, { args })
+      const match = subcommand(cli);
+      match(args);
+    }
+  }
+}
+
+export { index as MongooseTypes, cli$1 as cli, getConfig, getEntities, getMongoConnection, getMongoCredentials, getMongoose, getPermissions, getPleasureEntityMap, getPlugins, initializeEntities, pleasureApi, index$1 as plugins, index$2 as utils };

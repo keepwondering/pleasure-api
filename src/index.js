@@ -12,6 +12,7 @@ import { getPlugins } from 'lib/get-plugins'
 import mongoose from 'mongoose'
 import { getConfig } from 'lib/get-config.js'
 import { getMongoose } from './lib/get-mongoose'
+import cli from './lib/cli'
 
 /**
  * RESTful API
@@ -19,6 +20,7 @@ import { getMongoose } from './lib/get-mongoose'
  */
 
 export {
+  cli,
   getMongoose,
   getConfig,
   getMongoCredentials,

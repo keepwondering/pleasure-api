@@ -1,4 +1,4 @@
-import { packageJson, getConfig as _getConfig } from 'pleasure-utils'
+import { packageJson, extendConfig, getConfig as _getConfig } from 'pleasure-utils'
 import kebabCase from 'lodash/kebabCase'
 import merge from 'deepmerge'
 import Promise from 'bluebird'
@@ -86,8 +86,10 @@ export function getConfig (override = {}) {
     return init
   }
 
-  return merge(_default, _getConfig('api', override))
+  return merge(_default, _getConfig('api', override, false, false))
 }
+
+extendConfig('api', getConfig)
 
 export function setConfig (config) {
   return init = config

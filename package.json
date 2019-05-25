@@ -15,6 +15,7 @@
     "ava": "^1.4.1",
     "chai": "^4.2.0",
     "nodemon": "^1.19.0",
+    "pleasure-cli": "keepwondering/pleasure-cli#v1-beta",
     "pleasure-api-client": "keepwondering/pleasure-api-client#v1-beta",
     "pleasure-core-dev-tools": "keepwondering/pleasure-core-dev-tools#v1-beta",
     "rollup": "^1.12.3",

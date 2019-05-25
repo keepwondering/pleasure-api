@@ -50,5 +50,16 @@ export default [
       }
     ],
     plugins
-  }
+  },
+  /*{
+    input: 'cli/app.src.js',
+    output: [
+      {
+        file: 'cli/app.js',
+        format: 'cjs',
+        banner
+      }
+    ],
+    plugins
+  }*/
 ]

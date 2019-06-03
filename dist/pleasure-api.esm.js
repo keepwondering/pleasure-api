@@ -95,8 +95,8 @@ let _default = {
  * @property {Number} [timeout=15000] - Specifies how long a client must wait for the api to respond, in milliseconds
  * @property {Number} [collectionListLimit=100] - Default collection list limit
  * @property {Number} [collectionMaxListLimit=300] - Maximum list limit to be set by a client
- * @property {API.MongoDBConfig} mongodb - MongoDB credentials
- * @property {String} [entitiesPath=<root>/api] - Path from where to load files containing #Entity
+ * @property {MongoDBConfig} mongodb - MongoDB credentials
+ * @property {String} [entitiesPath=api/] - Path from where to load files containing #Entity, relative to project root
  * @property {String} [entitiesUri=/entities] - URI where to expose the #PleasureEntityMap
  * @property {ApiPlugin[]} [plugins] - Optional {@link ApiPlugin}'s to hook when used via cli `$ pls app start`.
  * @property {Object} [ui] - Optional object configuration for `nuxt-pleasure`.
@@ -107,7 +107,7 @@ let _default = {
  *
  * ```js
  * module.exports = {
- *   ui: {
+ *   api: {
  *     postCssVariables: {
  *       theme: {
  *         profile: {
@@ -123,7 +123,7 @@ let _default = {
 /**
  *
  * @param {Object} [override] - Optionally overrides local config
- * @return {API.ApiConfig}
+ * @return {ApiConfig}
  */
 function getConfig (override = {}) {
   if (init) {
@@ -141,8 +141,7 @@ function setConfig (config) {
 
 /**
  * @typedef {Object} API.Entity
- *
- * ![mvc pattern](/artifacts/mvc-pattern.jpg)
+ * @memberOf API
  *
  * A `Entity` is a file exporting an object with the representation of the `model` and `controller` components
  * found in an `mvc` pattern, putted altogether.
@@ -480,9 +479,8 @@ const finish = [];
 const rejects = [];
 
 /**
- * @function getEntities
+ * @function API.getEntities
  * @static
- * @memberOf API
  * @summary Looks & initializes (if not initialized already) all entities found in the path `entitiesPath` located in {@link API.ApiConfig}
  * @desc Lists all `*.js` files found in {@link API.ApiConfig}`->entitiesPath` and initializes their respective mongoose
  * models.
@@ -1388,9 +1386,7 @@ function pleasureApi (config, server) {
     }
 
     if (init) {
-      on('pleasure-entity-map', (pleasureEntityMap) => {
-        init(Object.assign({}, pluginMainPayload, { pleasureEntityMap }));
-      });
+      init(pluginMainPayload);
     }
 
     if (prepareCallback) {
@@ -1401,8 +1397,11 @@ function pleasureApi (config, server) {
     }
   });
 
-  prepare.forEach(pluginRouter);
-  extend.forEach(pluginRouter);
+  on('pleasure-entity-map', (pleasureEntityMap) => {
+    Object.assign(mainPayload, { pleasureEntityMap });
+    prepare.forEach(pluginRouter);
+    extend.forEach(pluginRouter);
+  });
 
   /*
   todo: this is a workaround in order for the koa-router to trigger middlewares without a specific path
@@ -1663,17 +1662,21 @@ let runningBuilder;
 let runningPort;
 let runningWatcher;
 
-const nuxtConfigFile = findRoot('./nuxt.config.js');
-const pleasureConfigFile = findRoot('./pleasure.config.js');
-
 function watcher () {
   if (runningWatcher) {
     runningWatcher.close();
     runningWatcher = null;
   }
 
+
+  const nuxtConfigFile = findRoot('./nuxt.config.js');
+  const pleasureConfigFile = findRoot('./pleasure.config.js');
+
   // delete cache
-  delete require.cache[require.resolve(nuxtConfigFile)];
+  if (fs.existsSync(nuxtConfigFile)) {
+    delete require.cache[require.resolve(nuxtConfigFile)];
+  }
+
   delete require.cache[require.resolve(pleasureConfigFile)];
 
   const { watchForRestart = [] } = getConfig$1('ui');
@@ -1695,12 +1698,13 @@ async function start (port) {
     return
   }
 
+  const nuxtConfigFile = findRoot('./nuxt.config.js');
+
   // delete cache
   delete require.cache[require.resolve(nuxtConfigFile)];
   delete require.cache[require.resolve(findRoot('./pleasure.config.js'))];
 
   const apiConfig = getConfig$1('api');
-  console.log({ apiConfig });
   port = port || apiConfig.port;
 
   let withNuxt = false;
@@ -1779,7 +1783,7 @@ async function restart () {
 
   runningConnection.close();
   runningConnection = null;
-  start(runningPort);
+  return start(runningPort)
 }
 
 const cli = {
@@ -1792,20 +1796,10 @@ const cli = {
     {
       name: 'start',
       help: 'starts the app in production',
-      command: function foo (args) {
-        console.log('go start the server!', { args });
-        start()
-          .then((port) => {
-            console.log(`Pleasure running on ${ port }`);
-            process.emit('pleasure-initialized');
-          });
-      }
-    },
-    {
-      name: 'bar',
-      help: 'an order you must obey!!',
-      command: function bar (args) {
-        console.log('go to the bar (:', { args });
+      async command (args) {
+        const port = await start();
+        console.log(`Pleasure running on ${ port }`);
+        process.emit('pleasure-initialized');
       }
     }
   ]

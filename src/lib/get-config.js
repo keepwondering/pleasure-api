@@ -51,8 +51,8 @@ let _default = {
  * @property {Number} [timeout=15000] - Specifies how long a client must wait for the api to respond, in milliseconds
  * @property {Number} [collectionListLimit=100] - Default collection list limit
  * @property {Number} [collectionMaxListLimit=300] - Maximum list limit to be set by a client
- * @property {API.MongoDBConfig} mongodb - MongoDB credentials
- * @property {String} [entitiesPath=<root>/api] - Path from where to load files containing #Entity
+ * @property {MongoDBConfig} mongodb - MongoDB credentials
+ * @property {String} [entitiesPath=api/] - Path from where to load files containing #Entity, relative to project root
  * @property {String} [entitiesUri=/entities] - URI where to expose the #PleasureEntityMap
  * @property {ApiPlugin[]} [plugins] - Optional {@link ApiPlugin}'s to hook when used via cli `$ pls app start`.
  * @property {Object} [ui] - Optional object configuration for `nuxt-pleasure`.
@@ -63,7 +63,7 @@ let _default = {
  *
  * ```js
  * module.exports = {
- *   ui: {
+ *   api: {
  *     postCssVariables: {
  *       theme: {
  *         profile: {
@@ -79,7 +79,7 @@ let _default = {
 /**
  *
  * @param {Object} [override] - Optionally overrides local config
- * @return {API.ApiConfig}
+ * @return {ApiConfig}
  */
 export function getConfig (override = {}) {
   if (init) {

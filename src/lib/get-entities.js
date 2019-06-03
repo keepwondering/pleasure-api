@@ -7,9 +7,8 @@ const finish = []
 const rejects = []
 
 /**
- * @function getEntities
+ * @function API.getEntities
  * @static
- * @memberOf API
  * @summary Looks & initializes (if not initialized already) all entities found in the path `entitiesPath` located in {@link API.ApiConfig}
  * @desc Lists all `*.js` files found in {@link API.ApiConfig}`->entitiesPath` and initializes their respective mongoose
  * models.

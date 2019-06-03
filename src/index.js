@@ -15,8 +15,8 @@ import { getMongoose } from './lib/get-mongoose'
 import cli from './lib/cli'
 
 /**
- * RESTful API
  * @class API
+ * @desc RESTful API
  */
 
 export {

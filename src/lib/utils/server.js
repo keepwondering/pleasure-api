@@ -13,17 +13,21 @@ let runningBuilder
 let runningPort
 let runningWatcher
 
-const nuxtConfigFile = findRoot('./nuxt.config.js')
-const pleasureConfigFile = findRoot('./pleasure.config.js')
-
 export function watcher () {
   if (runningWatcher) {
     runningWatcher.close()
     runningWatcher = null
   }
 
+
+  const nuxtConfigFile = findRoot('./nuxt.config.js')
+  const pleasureConfigFile = findRoot('./pleasure.config.js')
+
   // delete cache
-  delete require.cache[require.resolve(nuxtConfigFile)]
+  if (fs.existsSync(nuxtConfigFile)) {
+    delete require.cache[require.resolve(nuxtConfigFile)]
+  }
+
   delete require.cache[require.resolve(pleasureConfigFile)]
 
   const { watchForRestart = [] } = getConfig('ui')
@@ -45,12 +49,13 @@ export async function start (port) {
     return
   }
 
+  const nuxtConfigFile = findRoot('./nuxt.config.js')
+
   // delete cache
   delete require.cache[require.resolve(nuxtConfigFile)]
   delete require.cache[require.resolve(findRoot('./pleasure.config.js'))]
 
   const apiConfig = getConfig('api')
-  console.log({ apiConfig })
   port = port || apiConfig.port
 
   let withNuxt = false
@@ -129,5 +134,5 @@ export async function restart () {
 
   runningConnection.close()
   runningConnection = null
-  start(runningPort)
+  return start(runningPort)
 }

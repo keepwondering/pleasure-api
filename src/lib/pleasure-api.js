@@ -94,9 +94,7 @@ export function pleasureApi (config, server) {
     }
 
     if (init) {
-      on('pleasure-entity-map', (pleasureEntityMap) => {
-        init(Object.assign({}, pluginMainPayload, { pleasureEntityMap }))
-      })
+      init(pluginMainPayload)
     }
 
     if (prepareCallback) {
@@ -107,8 +105,11 @@ export function pleasureApi (config, server) {
     }
   })
 
-  prepare.forEach(pluginRouter)
-  extend.forEach(pluginRouter)
+  on('pleasure-entity-map', (pleasureEntityMap) => {
+    Object.assign(mainPayload, { pleasureEntityMap })
+    prepare.forEach(pluginRouter)
+    extend.forEach(pluginRouter)
+  })
 
   /*
   todo: this is a workaround in order for the koa-router to trigger middlewares without a specific path

@@ -1678,7 +1678,7 @@ function watcher () {
   const pleasureConfigFile = pleasureUtils.findRoot('./pleasure.config.js');
 
   // delete cache
-  if (fs.existsAsync(nuxtConfigFile)) {
+  if (fs.existsSync(nuxtConfigFile)) {
     delete require.cache[require.resolve(nuxtConfigFile)];
   }
 

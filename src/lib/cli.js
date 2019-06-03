@@ -11,20 +11,10 @@ const cli = {
     {
       name: 'start',
       help: 'starts the app in production',
-      command: function foo (args) {
-        console.log('go start the server!', { args })
-        start()
-          .then((port) => {
-            console.log(`Pleasure running on ${ port }`)
-            process.emit('pleasure-initialized')
-          })
-      }
-    },
-    {
-      name: 'bar',
-      help: 'an order you must obey!!',
-      command: function bar (args) {
-        console.log('go to the bar (:', { args })
+      async command (args) {
+        const port = await start()
+        console.log(`Pleasure running on ${ port }`)
+        process.emit('pleasure-initialized')
       }
     }
   ]

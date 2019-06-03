@@ -1,7 +1,6 @@
 /**
  * @typedef {Object} API.Entity
- *
- * ![mvc pattern](/artifacts/mvc-pattern.jpg)
+ * @memberOf API
  *
  * A `Entity` is a file exporting an object with the representation of the `model` and `controller` components
  * found in an `mvc` pattern, putted altogether.

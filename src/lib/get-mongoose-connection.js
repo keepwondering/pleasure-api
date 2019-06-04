@@ -26,8 +26,8 @@ const pif = (w, what = null) => {
   return w ? what || w : ''
 }
 
-export function getMongoCredentials (additional = {}) {
-  const { mongodb } = getConfig({ mongodb: additional })
+export function getMongoCredentials (additional) {
+  const { mongodb } = getConfig(additional ? { mongodb: additional } : {})
   return mongodb
 }
 
@@ -74,7 +74,7 @@ export function getMongoUri (credentials = {}) {
 export function getMongoConnection (config) {
   const { debug, mongodb, mongodb: { driverOptions } } = getConfig(config ? { mongodb: config } : {})
 
-  console.log(`connect to`, getMongoUri(mongodb))
+  console.log(`connect to`, { mongodb }, getMongoUri(mongodb))
   const connection = mongoose
     .createConnection(getMongoUri(mongodb), driverOptions)
 

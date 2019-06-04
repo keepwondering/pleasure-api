@@ -296,11 +296,12 @@ function getMongoUri (credentials = {}) {
  * })
  * ```
  */
-function getMongoConnection (config = {}) {
-  const { debug, mongodb: { driverOptions } } = getConfig({ mongodb: config });
+function getMongoConnection (config) {
+  const { debug, mongodb, mongodb: { driverOptions } } = getConfig(config ? { mongodb: config } : {});
 
+  console.log(`connect to`, getMongoUri(mongodb));
   const connection = mongoose
-    .createConnection(getMongoUri(config), driverOptions);
+    .createConnection(getMongoUri(mongodb), driverOptions);
 
   connection.on('connected', function () {
     if (!debug) {

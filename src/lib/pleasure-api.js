@@ -57,7 +57,7 @@ import merge from 'deepmerge'
 
 export function pleasureApi (config, server) {
   // set default config
-  const { prefix } = setConfig(getConfig(config))
+  const { prefix } = getConfig(config)
   const { on } = EventBus()
 
   const router = Router({

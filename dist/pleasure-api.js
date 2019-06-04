@@ -19,6 +19,7 @@ var mongoose__default = _interopDefault(mongoose);
 var defaults = _interopDefault(require('lodash/defaults'));
 var Router = _interopDefault(require('koa-router'));
 var helmet$1 = _interopDefault(require('koa-helmet'));
+var pleasureApi$1 = require('pleasure-api');
 var Boom = _interopDefault(require('boom'));
 var jwtAuthentication = _interopDefault(require('pleasure-api-plugin-jwt'));
 var forOwn = _interopDefault(require('lodash/forOwn'));
@@ -56,7 +57,7 @@ const { name } = pleasureUtils.packageJson();
 
 let init;
 
-let _default = {
+const _default = {
   prefix: '/api',
   port: 3000,
   collectionListLimit: 100,
@@ -107,7 +108,6 @@ let _default = {
  * @property {Object} [ui] - Optional object configuration for `nuxt-pleasure`.
  * @property {Object} [ui.postCssVariables] - Optional object variables for `postcss-css-variables`.
  * @property {String[]} [ui.watchForRestart] - Array of files or directories to watch and auto restart the application.
- *
  * @example PostCSS Variables
  *
  * ```js
@@ -130,19 +130,17 @@ let _default = {
  * @param {Object} [override] - Optionally overrides local config
  * @return {ApiConfig}
  */
+
 function getConfig (override = {}) {
   if (init) {
     return init
   }
 
-  return merge(_default, pleasureUtils.getConfig('api', override, false, false))
+  const apiConfig = merge.all([{}, _default, pleasureUtils.getConfig('api', override, false, false)]);
+  return pleasureUtils.mergeConfigWithEnv(apiConfig, 'PLEASURE_API')
 }
 
 pleasureUtils.extendConfig('api', getConfig);
-
-function setConfig (config) {
-  return init = config
-}
 
 /**
  * @typedef {Object} API.Entity
@@ -261,7 +259,7 @@ function getMongoCredentials (additional) {
   return mongodb
 }
 
-function getMongoUri (credentials = {}) {
+function getMongoUri (credentials) {
   const { username, password, host, port, database } = getMongoCredentials(credentials);
   // console.log({ host, database })
   return `mongodb://${ pif(username) }${ pif(password, ':' + password) }${ pif(username, '@') }${ host }:${ port }/${ database }`
@@ -302,9 +300,11 @@ function getMongoUri (credentials = {}) {
  * ```
  */
 function getMongoConnection (config) {
+  console.log(`getConfig`, getConfig());
+  console.log(`_getConfig`, pleasureUtils.getConfig('api'));
   const { debug, mongodb, mongodb: { driverOptions } } = getConfig(config ? { mongodb: config } : {});
 
-  console.log(`connect to`, { mongodb }, getMongoUri(mongodb));
+  console.log(`connect to`, { mongodb, config }, getMongoUri(mongodb));
   const connection = mongoose__default
     .createConnection(getMongoUri(mongodb), driverOptions);
 
@@ -551,7 +551,7 @@ var index = {
 
 var helmet = {
   prepare ({ router }) {
-    const { helmet: helmetConfig = {} } = pleasureUtils.getConfig('api');
+    const { helmet: helmetConfig = {} } = pleasureApi$1.getConfig('api');
     router.use(helmet$1(helmetConfig));
   }
 };
@@ -1355,7 +1355,7 @@ function getPlugins (configOverride) {
 
 function pleasureApi (config, server) {
   // set default config
-  const { prefix } = setConfig(getConfig(config));
+  const { prefix } = getConfig(config);
   const { on } = pleasureUtils.EventBus();
 
   const router = Router({
@@ -1572,7 +1572,7 @@ const pif$1 = (w, what = null) => {
 
 function getMongoUri$1 (credentials = {}) {
   // important: do not move to the global scope
-  const { mongodb } = pleasureUtils.getConfig('api');
+  const { mongodb } = pleasureApi$1.getConfig('api');
 
   const { username = mongodb.username, password = mongodb.password, host = mongodb.host, port = mongodb.port, database = mongodb.database } = credentials;
   let { driverOptions = {} } = credentials;
@@ -1581,7 +1581,7 @@ function getMongoUri$1 (credentials = {}) {
 }
 
 async function backupDB ({ name, compress = true, verbose = true } = {}) {
-  const { mongodb } = pleasureUtils.getConfig('api');
+  const { mongodb } = pleasureApi$1.getConfig('api');
   // todo: implement plugins
   // const { tmpFolder, uploadFolder } = require('../../server/utils/project-paths')
 
@@ -1685,7 +1685,7 @@ function watcher () {
 
   delete require.cache[require.resolve(pleasureConfigFile)];
 
-  const { watchForRestart = [] } = pleasureUtils.getConfig('ui');
+  const { watchForRestart = [] } = pleasureApi$1.getConfig('ui');
   const cacheClean = [nuxtConfigFile, pleasureConfigFile].concat(watchForRestart);
   runningWatcher = chokidar.watch(cacheClean, { ignored: /(^|[\/\\])\../, ignoreInitial: true });
 
@@ -1710,7 +1710,7 @@ async function start (port) {
   delete require.cache[require.resolve(nuxtConfigFile)];
   delete require.cache[require.resolve(pleasureUtils.findRoot('./pleasure.config.js'))];
 
-  const apiConfig = pleasureUtils.getConfig('api');
+  const apiConfig = pleasureApi$1.getConfig();
   port = port || apiConfig.port;
 
   let withNuxt = false;
@@ -1731,7 +1731,7 @@ async function start (port) {
     const ui = ['pleasure-ui-nuxt', {
       root: pleasureUtils.findRoot(),
       name: pleasureUtils.packageJson().name,
-      config: pleasureUtils.getConfig('ui'),
+      config: pleasureApi$1.getConfig('ui'),
       pleasureRoot: path.join(__dirname, '..')
     }];
     currentModules.push(ui);

@@ -1,5 +1,5 @@
 import { MongoBackup } from './mongo-backup'
-import { getConfig } from 'pleasure-utils'
+import { getConfig } from 'pleasure-api'
 import querystring from 'querystring'
 
 import moment from 'moment'

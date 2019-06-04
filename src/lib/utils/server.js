@@ -1,6 +1,7 @@
 import Koa from 'koa'
 import { pleasureApi } from '../pleasure-api.js'
-import { getConfig, findRoot, packageJson } from 'pleasure-utils'
+import { findRoot, packageJson } from 'pleasure-utils'
+import { getConfig } from 'pleasure-api'
 import koaBody from 'koa-body'
 import { Nuxt, Builder } from 'nuxt'
 import fs from 'fs'
@@ -55,7 +56,7 @@ export async function start (port) {
   delete require.cache[require.resolve(nuxtConfigFile)]
   delete require.cache[require.resolve(findRoot('./pleasure.config.js'))]
 
-  const apiConfig = getConfig('api')
+  const apiConfig = getConfig()
   port = port || apiConfig.port
 
   let withNuxt = false

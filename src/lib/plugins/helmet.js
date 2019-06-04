@@ -1,5 +1,5 @@
 import helmet from 'koa-helmet'
-import { getConfig } from 'pleasure-utils'
+import { getConfig } from 'pleasure-api'
 
 export default {
   prepare ({ router }) {

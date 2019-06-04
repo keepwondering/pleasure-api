@@ -1,4 +1,4 @@
-import { packageJson, extendConfig, getConfig as _getConfig } from 'pleasure-utils'
+import { packageJson, extendConfig, getConfig as _getConfig, mergeConfigWithEnv } from 'pleasure-utils'
 import kebabCase from 'lodash/kebabCase'
 import merge from 'deepmerge'
 import Promise from 'bluebird'
@@ -7,7 +7,7 @@ const { name } = packageJson()
 
 let init
 
-let _default = {
+const _default = {
   prefix: '/api',
   port: 3000,
   collectionListLimit: 100,
@@ -58,7 +58,6 @@ let _default = {
  * @property {Object} [ui] - Optional object configuration for `nuxt-pleasure`.
  * @property {Object} [ui.postCssVariables] - Optional object variables for `postcss-css-variables`.
  * @property {String[]} [ui.watchForRestart] - Array of files or directories to watch and auto restart the application.
- *
  * @example PostCSS Variables
  *
  * ```js
@@ -81,12 +80,14 @@ let _default = {
  * @param {Object} [override] - Optionally overrides local config
  * @return {ApiConfig}
  */
+
 export function getConfig (override = {}) {
   if (init) {
     return init
   }
 
-  return merge(_default, _getConfig('api', override, false, false))
+  const apiConfig = merge.all([{}, _default, _getConfig('api', override, false, false)])
+  return mergeConfigWithEnv(apiConfig, 'PLEASURE_API')
 }
 
 extendConfig('api', getConfig)

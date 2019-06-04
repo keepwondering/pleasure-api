@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 import { getConfig } from './get-config.js'
+import { getConfig as _getConfig } from 'pleasure-utils'
 
 /**
  * @typedef MongoClient
@@ -31,7 +32,7 @@ export function getMongoCredentials (additional) {
   return mongodb
 }
 
-export function getMongoUri (credentials = {}) {
+export function getMongoUri (credentials) {
   const { username, password, host, port, database } = getMongoCredentials(credentials)
   // console.log({ host, database })
   return `mongodb://${ pif(username) }${ pif(password, ':' + password) }${ pif(username, '@') }${ host }:${ port }/${ database }`
@@ -72,9 +73,11 @@ export function getMongoUri (credentials = {}) {
  * ```
  */
 export function getMongoConnection (config) {
+  console.log(`getConfig`, getConfig())
+  console.log(`_getConfig`, _getConfig('api'))
   const { debug, mongodb, mongodb: { driverOptions } } = getConfig(config ? { mongodb: config } : {})
 
-  console.log(`connect to`, { mongodb }, getMongoUri(mongodb))
+  console.log(`connect to`, { mongodb, config }, getMongoUri(mongodb))
   const connection = mongoose
     .createConnection(getMongoUri(mongodb), driverOptions)
 

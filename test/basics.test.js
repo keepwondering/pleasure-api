@@ -5,7 +5,11 @@ import { PleasureApiClient } from 'pleasure-api-client' // pleasure
 import { getConfig, getPleasureEntityMap, getPermissions, getEntities } from '../' // pleasure-api
 import './utils/web-server.js'
 
-const pleasureClient = PleasureApiClient.instance()
+let pleasureClient
+
+test.before(() => {
+  pleasureClient = PleasureApiClient.instance()
+})
 
 let dummyUser
 

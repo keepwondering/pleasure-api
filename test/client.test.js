@@ -5,7 +5,14 @@ import './utils/web-server.js'
 import 'pleasure-core-dev-tools/test/clean-db-per-test.js'
 import { pick } from 'lodash'
 
-const pleasureClient = PleasureApiClient.instance()
+let pleasureClient
+
+test.before(() => {
+  pleasureClient = PleasureApiClient.instance()
+  pleasureClient.on('error', error => {
+    console.log(`error`, error)
+  })
+})
 
 test.beforeEach(async t => {
   return pleasureClient.logout()

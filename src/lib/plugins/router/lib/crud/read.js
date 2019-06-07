@@ -1,4 +1,4 @@
-import { ApiError } from 'pleasure-api-client'
+import { ApiError } from 'pleasure-api-client/src/lib/api-error'
 import get from 'lodash/get'
 
 export async function read ({ entity, id, entryPath, queryFilter }) {

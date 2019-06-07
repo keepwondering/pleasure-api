@@ -73,11 +73,8 @@ export function getMongoUri (credentials) {
  * ```
  */
 export function getMongoConnection (config) {
-  console.log(`getConfig`, getConfig())
-  console.log(`_getConfig`, _getConfig('api'))
   const { debug, mongodb, mongodb: { driverOptions } } = getConfig(config ? { mongodb: config } : {})
 
-  console.log(`connect to`, { mongodb, config }, getMongoUri(mongodb))
   const connection = mongoose
     .createConnection(getMongoUri(mongodb), driverOptions)
 

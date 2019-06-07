@@ -28,8 +28,6 @@ import fluxPattern from 'pleasure-api-plugin-flux';
 import qs from 'qs';
 import { addedDiff, updatedDiff } from 'deep-object-diff';
 import size from 'lodash/size';
-import { ApiError } from 'pleasure-api-client';
-export { ApiError } from 'pleasure-api-client';
 import dot from 'dot-object';
 import forEach from 'lodash/forEach';
 import castArray from 'lodash/castArray';
@@ -295,11 +293,8 @@ function getMongoUri (credentials) {
  * ```
  */
 function getMongoConnection (config) {
-  console.log(`getConfig`, getConfig());
-  console.log(`_getConfig`, getConfig$1('api'));
   const { debug, mongodb, mongodb: { driverOptions } } = getConfig(config ? { mongodb: config } : {});
 
-  console.log(`connect to`, { mongodb, config }, getMongoUri(mongodb));
   const connection = mongoose
     .createConnection(getMongoUri(mongodb), driverOptions);
 
@@ -703,6 +698,26 @@ async function create ($pleasureApiCtx) {
   theEntry.$pleasure = $pleasureApiCtx;
 
   return theEntry.save()
+}
+
+/**
+ * Used to throw errors returned by the API server.
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error|Error}
+ */
+class ApiError extends Error {
+  /**
+   *
+   * @param {String} error - Error name.
+   * @param {String} message
+   * @param {Number} [code=500] - Error number.
+   * @param data
+   */
+  constructor (error, message, code = 500, data) {
+    super(error);
+    this.message = message;
+    this.code = code;
+    this.data = data;
+  }
 }
 
 async function read ({ entity, id, entryPath, queryFilter }) {
@@ -1821,4 +1836,4 @@ function cli$1 (subcommand) {
   }
 }
 
-export { index as MongooseTypes, cli$1 as cli, getConfig, getEntities, getMongoConnection, getMongoCredentials, getMongoose, getPermissions, getPleasureEntityMap, getPlugins, initializeEntities, pleasureApi, index$1 as plugins, index$2 as utils };
+export { ApiError, index as MongooseTypes, cli$1 as cli, getConfig, getEntities, getMongoConnection, getMongoCredentials, getMongoose, getPermissions, getPleasureEntityMap, getPlugins, initializeEntities, pleasureApi, index$1 as plugins, index$2 as utils };

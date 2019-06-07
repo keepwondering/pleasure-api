@@ -34,7 +34,6 @@ var fluxPattern = _interopDefault(require('pleasure-api-plugin-flux'));
 var qs = _interopDefault(require('qs'));
 var deepObjectDiff = require('deep-object-diff');
 var size = _interopDefault(require('lodash/size'));
-var pleasureApiClient = require('pleasure-api-client');
 var dot = _interopDefault(require('dot-object'));
 var forEach = _interopDefault(require('lodash/forEach'));
 var castArray = _interopDefault(require('lodash/castArray'));
@@ -707,6 +706,26 @@ async function create ($pleasureApiCtx) {
   return theEntry.save()
 }
 
+/**
+ * Used to throw errors returned by the API server.
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error|Error}
+ */
+class ApiError extends Error {
+  /**
+   *
+   * @param {String} error - Error name.
+   * @param {String} message
+   * @param {Number} [code=500] - Error number.
+   * @param data
+   */
+  constructor (error, message, code = 500, data) {
+    super(error);
+    this.message = message;
+    this.code = code;
+    this.data = data;
+  }
+}
+
 async function read ({ entity, id, entryPath, queryFilter }) {
   let doc = await queryFilter(entity.findById(id));
   const fullIdentifier = id + (entryPath ? `/${entryPath}` : '');
@@ -716,7 +735,7 @@ async function read ({ entity, id, entryPath, queryFilter }) {
   }
 
   if (!doc) {
-    throw new pleasureApiClient.ApiError(`${fullIdentifier} not found`, 404)
+    throw new ApiError(`${fullIdentifier} not found`, 404)
   }
 
   return doc
@@ -838,7 +857,7 @@ async function push ({ entity, id, entryPath, newEntry, params }) {
 
   if (!Array.isArray(array)) {
     const fullIdentifier = `${ id }/${ entryPath }`;
-    throw new pleasureApiClient.ApiError(`${ fullIdentifier } not found`, 404)
+    throw new ApiError(`${ fullIdentifier } not found`, 404)
   }
 
   if (newEntry.multiple) {
@@ -859,7 +878,7 @@ async function pull ({ entity, id, entryPath, pull }) {
 
   if (!Array.isArray(array)) {
     const fullIdentifier = `${id}/${entryPath}`;
-    throw new pleasureApiClient.ApiError(`${fullIdentifier} not found`, 404)
+    throw new ApiError(`${fullIdentifier} not found`, 404)
   }
 
   castArray(pull).forEach(pull => {
@@ -1824,12 +1843,7 @@ function cli$1 (subcommand) {
 }
 
 exports.mongoose = mongoose__default;
-Object.defineProperty(exports, 'ApiError', {
-  enumerable: true,
-  get: function () {
-    return pleasureApiClient.ApiError;
-  }
-});
+exports.ApiError = ApiError;
 exports.MongooseTypes = index;
 exports.cli = cli$1;
 exports.getConfig = getConfig;

@@ -25,6 +25,9 @@ const plugins = [
 
     // if false then skip sourceMap generation for CommonJS modules
     sourceMap: true // Default: true
+  }),
+  resolve({
+    only: ['pleasure-api-client']
   })
 ]
 

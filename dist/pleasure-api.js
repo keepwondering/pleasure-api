@@ -300,11 +300,8 @@ function getMongoUri (credentials) {
  * ```
  */
 function getMongoConnection (config) {
-  console.log(`getConfig`, getConfig());
-  console.log(`_getConfig`, pleasureUtils.getConfig('api'));
   const { debug, mongodb, mongodb: { driverOptions } } = getConfig(config ? { mongodb: config } : {});
 
-  console.log(`connect to`, { mongodb, config }, getMongoUri(mongodb));
   const connection = mongoose__default
     .createConnection(getMongoUri(mongodb), driverOptions);
 

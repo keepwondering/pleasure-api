@@ -3,7 +3,7 @@ import { getConfig, setConfig } from './get-config.js'
 import { getMongoose } from './get-mongoose.js'
 import mongoose from 'mongoose'
 import { getPlugins } from './get-plugins.js'
-import { EventBus } from 'pleasure-utils'
+import { EventBus, getConfig as _getConfig } from 'pleasure-utils'
 import { getEntities } from './get-entities'
 import merge from 'deepmerge'
 
@@ -65,6 +65,21 @@ export function pleasureApi (config, server) {
   })
 
   const { prepare, extend, plugins, pluginsApi, pluginsConfig } = getPlugins(config)
+
+  /**
+   * @typedef {Object} PleasureApi.PluginPayload
+   * @property {mongoose} mongoose - The mongoose module. {@see https://mongoosejs.com/}
+   * @property {mongoose} mongooseApi - The mongoose instance used by the API. {@see https://mongoosejs.com/}
+   * @property router - The koa router instance. {@see https://github.com/ZijianHe/koa-router}
+   * @property pluginsApi - The koa router instance. {@see https://github.com/ZijianHe/koa-router}
+   * @property server - The http server instance. {@see https://nodejs.org/api/http.html#http_class_http_server}
+   * @property {Object} pluginsConfig - Object containing all configurations of all plugins. Keyed by plugin name.
+   * @property {API.getEntities} getEntities - {@see API.getEntities}
+   * @property {API.getConfig} getConfig - {@see API.getConfig}
+   * @property {Object} config - Plugin's merged config. The result of merging the default values of the plugin with those
+   * set by the user locally in the pleasure.config.js file.
+   */
+
   const mainPayload = {
     mongoose,
     mongooseApi: getMongoose(),
@@ -98,10 +113,11 @@ export function pleasureApi (config, server) {
     }
 
     if (prepareCallback) {
-      prepare.push({ cb: prepareCallback, config })
+      prepare.push({ cb: prepareCallback, config, name })
     }
+
     if (extendCallback) {
-      extend.push({ cb: extendCallback, config })
+      extend.push({ cb: extendCallback, config, name })
     }
   })
 
@@ -121,6 +137,10 @@ export function pleasureApi (config, server) {
   })
 
   getEntities()
+    .then(() => {
+      const { debug } = _getConfig()
+      debug && console.log(`pleasure api initialized`)
+    })
     .catch(err => {
       console.error(`An error occurred while loading the entities:`, err)
     })

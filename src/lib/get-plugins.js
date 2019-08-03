@@ -14,7 +14,7 @@ import { getConfig } from './get-config.js'
 export function getPlugins (configOverride) {
   const api = getConfig(configOverride)
 
-  let plugins = [helmet, pleasureContext, jwtAuthentication, schemas, socketIo, fluxPattern, apiRouter].concat(castArray(api.plugins))
+  let plugins = [helmet, pleasureContext, jwtAuthentication, schemas, socketIo, fluxPattern, apiRouter, ...castArray(api.plugins)]
   plugins.push(pleasureResponse) // last plugin is the response handler
 
   // called before the api logic... schemas are called the last

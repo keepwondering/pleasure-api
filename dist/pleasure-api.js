@@ -12,7 +12,7 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 var pleasureUtils = require('pleasure-utils');
 var kebabCase = _interopDefault(require('lodash/kebabCase'));
 var merge = _interopDefault(require('deepmerge'));
-var Promise$1 = _interopDefault(require('bluebird'));
+var Promise$2 = _interopDefault(require('bluebird'));
 var path = _interopDefault(require('path'));
 var mongoose = require('mongoose');
 var mongoose__default = _interopDefault(mongoose);
@@ -45,11 +45,16 @@ var fs = _interopDefault(require('fs'));
 var querystring = _interopDefault(require('querystring'));
 var tar = _interopDefault(require('tar'));
 var rimraf = _interopDefault(require('rimraf'));
+var csv = _interopDefault(require('csvtojson/v1'));
+var _ = require('lodash');
+var ___default = _interopDefault(_);
+var concat = _interopDefault(require('lodash/concat'));
+var chalk = _interopDefault(require('chalk'));
+var escapeRegexp = _interopDefault(require('escape-string-regexp'));
 var pleasureCli = require('pleasure-cli');
 var Koa = _interopDefault(require('koa'));
 var koaBody = _interopDefault(require('koa-body'));
 var nuxt = require('nuxt');
-var lodash = require('lodash');
 var chokidar = _interopDefault(require('chokidar'));
 
 const { name } = pleasureUtils.packageJson();
@@ -61,6 +66,7 @@ const _default = {
   port: 3000,
   collectionListLimit: 100,
   collectionMaxListLimit: 300,
+  createEntityTimeout: 3000,
   mongodb: {
     host: 'localhost',
     port: 27017,
@@ -71,7 +77,7 @@ const _default = {
       autoIndex: true,
       reconnectTries: Number.MAX_VALUE,
       reconnectInterval: 500,
-      promiseLibrary: Promise$1,
+      promiseLibrary: Promise$2,
       poolSize: 5,
       useNewUrlParser: true
     }
@@ -100,6 +106,8 @@ const _default = {
  * @property {Number} [timeout=15000] - Specifies how long a client must wait for the api to respond, in milliseconds
  * @property {Number} [collectionListLimit=100] - Default collection list limit
  * @property {Number} [collectionMaxListLimit=300] - Maximum list limit to be set by a client
+ * @property {Number} [createEntityTimeout=3000] - Milliseconds to wait for mongoose to connect to MongoDB and
+ * initialize all of the schemas. Would raise an "Entity creation timeout" error after this time.
  * @property {MongoDBConfig} mongodb - MongoDB credentials
  * @property {String} [entitiesPath=api/] - Path from where to load files containing #Entity, relative to project root
  * @property {String} [entitiesUri=/entities] - URI where to expose the #PleasureEntityMap
@@ -125,7 +133,7 @@ const _default = {
  */
 
 /**
- *
+ * @method API.getConfig
  * @param {Object} [override] - Optionally overrides local config
  * @return {ApiConfig}
  */
@@ -481,8 +489,7 @@ const finish = [];
 const rejects = [];
 
 /**
- * @function API.getEntities
- * @static
+ * @method API.getEntities
  * @summary Looks & initializes (if not initialized already) all entities found in the path `entitiesPath` located in {@link API.ApiConfig}
  * @desc Lists all `*.js` files found in {@link API.ApiConfig}`->entitiesPath` and initializes their respective mongoose
  * models.
@@ -502,10 +509,13 @@ async function getEntities () {
     })
   }
 
+  const { createEntityTimeout } = getConfig();
+
   initializing = true;
   const toC = setTimeout(() => {
-    rejects.forEach(r => r(new Error(`Entity creation timeout`)));
-  }, 3000);
+    rejects.forEach(r => r(new Error(`Entity creation timeout.`)));
+  }, createEntityTimeout);
+
   const { entities: theEntities, schemas: theSchemas } = await initializeEntities(); //todo: check why not resolving
   entities = theEntities;
   schemas = theSchemas;
@@ -546,6 +556,7 @@ var index = {
 };
 
 var helmet = {
+  name: 'helmet',
   prepare ({ router }) {
     const { helmet: helmetConfig = {} } = pleasureApi$1.getConfig('api');
     router.use(helmet$1(helmetConfig));
@@ -553,6 +564,7 @@ var helmet = {
 };
 
 var pleasureContext = {
+  name: 'context',
   prepare ({ router }) {
     router.use(async function robots (ctx, next) {
       ctx.response.set('X-Robots-Tag', 'noindex, nofollow');
@@ -636,6 +648,7 @@ async function getSchemaPaths () {
 }
 
 var schemas$1 = {
+  name: 'schemas',
   prepare ({ router }) {
     const api = getConfig();
 
@@ -812,7 +825,7 @@ async function remove ($pleasureApiCtx) {
   const removed = [];
   const errors = [];
 
-  await Promise$1.each(entries, async entry => {
+  await Promise$2.each(entries, async entry => {
     try {
       removed.push(await entry.remove());
     } catch (err) {
@@ -1038,10 +1051,6 @@ function filterAccess (res, access) {
     return res
   }
 
-  if (Array.isArray(res)) {
-    return res.map(v => pick(v, access))
-  }
-
   return pick(res, access)
 }
 
@@ -1062,12 +1071,8 @@ let pleasureEntityModelMap = null;
 let permissions = null;
 
 var router = {
-  config: {
-
-  },
-  name: 'crud',
+  name: 'crud-router',
   prepare ({ router, getEntities }) {
-
     getEntities()
       .then(({ entities: e, schemas }) => {
         permissions = getPermissions(schemas);
@@ -1118,12 +1123,18 @@ var router = {
       // todo: check if id is an objectId
       //  if it's not an ObjectId, it must be treated as an entity controller method
       if (isObjectId(id)) {
+        // store resolved entry in cache
+        let resolvedEntry;
         entry = () => {
+          if (resolvedEntry) {
+            return resolvedEntry
+          }
           return entity.findById(id)
             .then(entry => {
               if (entry) {
                 entry.$pleasure = ctx.$pleasure.$api;
               }
+              resolvedEntry = entry;
               return entry
             })
         };
@@ -1251,26 +1262,52 @@ var router = {
       }
 
       const res = await resolveFn();
+      const overrideMethods = {};
 
-      ctx.$pleasure.res = filterAccess(res, overriddenReadAccess || await permissions[model].read(ctx.$pleasure.$api));
+      if (method === 'create' && res._id) {
+        let foundEntry;
+        Object.assign(overrideMethods, {
+          async entry () {
+            if (foundEntry) {
+              return foundEntry
+            }
+            const entry = await entity.findById(res._id);
+
+            if (entry) {
+              entry.$pleasure = ctx.$pleasure.$api;
+            }
+
+            foundEntry = entry;
+
+            return entry
+          }
+        });
+      }
+
+      const entryPermissionFilter = async (entry) => {
+        const override = {};
+        if (entry) {
+          Object.assign(override, { entry () { return entry } });
+        }
+        return overriddenReadAccess || await permissions[model].read(Object.assign({}, ctx.$pleasure.$api, overrideMethods, override))
+      };
+
+      if (Array.isArray(res)) {
+        ctx.$pleasure.res = await Promise$2.map(res, async entry => filterAccess(entry, await entryPermissionFilter(entry)));
+      } else {
+        ctx.$pleasure.res = filterAccess(res, overriddenReadAccess || await permissions[model].read(Object.assign({}, ctx.$pleasure.$api, overrideMethods)));
+      }
+
       return next()
     });
   }
 };
 
 var pleasureResponse = {
+  name: 'response',
   extend ({ router }) {
     // return pleasure api results
     router.use((ctx) => {
-      // api returning a string
-      // will be converted in an object response
-/*
-      if (!ctx.$pleasure.res) {
-        ctx.body = Boom.badData().output.payload
-        return
-      }
-*/
-
       let apiResponse;
 
       if (ctx.$pleasure.res) {
@@ -1288,7 +1325,7 @@ var pleasureResponse = {
 function getPlugins (configOverride) {
   const api = getConfig(configOverride);
 
-  let plugins = [helmet, pleasureContext, jwtAuthentication, schemas$1, socketIo, fluxPattern, router].concat(castArray(api.plugins));
+  let plugins = [helmet, pleasureContext, jwtAuthentication, schemas$1, socketIo, fluxPattern, router, ...castArray(api.plugins)];
   plugins.push(pleasureResponse); // last plugin is the response handler
 
   // called before the api logic... schemas are called the last
@@ -1379,6 +1416,21 @@ function pleasureApi (config, server) {
   });
 
   const { prepare, extend, plugins, pluginsApi, pluginsConfig } = getPlugins(config);
+
+  /**
+   * @typedef {Object} PleasureApi.PluginPayload
+   * @property {mongoose} mongoose - The mongoose module. {@see https://mongoosejs.com/}
+   * @property {mongoose} mongooseApi - The mongoose instance used by the API. {@see https://mongoosejs.com/}
+   * @property router - The koa router instance. {@see https://github.com/ZijianHe/koa-router}
+   * @property pluginsApi - The koa router instance. {@see https://github.com/ZijianHe/koa-router}
+   * @property server - The http server instance. {@see https://nodejs.org/api/http.html#http_class_http_server}
+   * @property {Object} pluginsConfig - Object containing all configurations of all plugins. Keyed by plugin name.
+   * @property {API.getEntities} getEntities - {@see API.getEntities}
+   * @property {API.getConfig} getConfig - {@see API.getConfig}
+   * @property {Object} config - Plugin's merged config. The result of merging the default values of the plugin with those
+   * set by the user locally in the pleasure.config.js file.
+   */
+
   const mainPayload = {
     mongoose: mongoose__default,
     mongooseApi: getMongoose(),
@@ -1412,10 +1464,11 @@ function pleasureApi (config, server) {
     }
 
     if (prepareCallback) {
-      prepare.push({ cb: prepareCallback, config });
+      prepare.push({ cb: prepareCallback, config, name });
     }
+
     if (extendCallback) {
-      extend.push({ cb: extendCallback, config });
+      extend.push({ cb: extendCallback, config, name });
     }
   });
 
@@ -1435,6 +1488,10 @@ function pleasureApi (config, server) {
   });
 
   getEntities()
+    .then(() => {
+      const { debug } = pleasureUtils.getConfig();
+      debug && console.log(`pleasure api initialized`);
+    })
     .catch(err => {
       console.error(`An error occurred while loading the entities:`, err);
     });
@@ -1475,7 +1532,7 @@ function cleanMongooseEntry (entry) {
   return cleanEmptyArrays(entry)
 }
 
-const writeFile = Promise$1.promisify(fs.writeFile);
+const writeFile = Promise$2.promisify(fs.writeFile);
 
 const defaultOptions = {
   savedDocsCountLength: 10,
@@ -1498,7 +1555,7 @@ class MongoBackup {
 
     this._collectionsCreated = {};
 
-    return new Promise$1((resolve) => {
+    return new Promise$2((resolve) => {
       getMongoConnection().then((conn) => {
         this.conn = conn;
         resolve(this);
@@ -1578,7 +1635,7 @@ class MongoBackup {
       return v.name
     });
 
-    await Promise$1.each(this.collections, this.backupCollection.bind(this));
+    await Promise$2.each(this.collections, this.backupCollection.bind(this));
   }
 }
 
@@ -1632,9 +1689,142 @@ const httpMethodToMongoMethod = {
   get: 'read' // conditionally patched to 'list' in the router... nasty...
 };
 
-function drop (credentials = {}) {
+function asteriskToBoolean (obj) {
+  return ___default.mapValues(obj, v => {
+    if (typeof v === 'object') {
+      return asteriskToBoolean(v)
+    }
+
+    return v === '*' ? true : v
+  })
+}
+
+const resolveCSV = (csvFile) => {
+  return path.resolve(__dirname, '../../scripts/init-data', csvFile)
+};
+
+const plugins = [asteriskToBoolean/*, resolveFilesToUploads*/];
+
+function process$1 (jsonObj, plugin) {
+  return Promise$2
+    .resolve(plugin ? concat(plugins, plugin) : plugins)
+    .each(async plugin => {
+      // console.log({plugin})
+      jsonObj = await plugin(jsonObj);
+    })
+    .then(() => jsonObj)
+}
+
+/**
+ * @method loadCSVIntoJSON
+ * @param csvFile
+ * @param {Object} opts - Some extra options for csvtojson. {@see https://github.com/Keyang/node-csvtojson}
+ * @param {RegExp} opts.includeColumns - Include only columns matching the regular expression. {@see https://github.com/Keyang/node-csvtojson}
+ * @param {Boolean} opts.ignoreEmpty - Whether to ignore empty values in csv columns. {@see https://github.com/Keyang/node-csvtojson}
+ * @param {Function} opts.plugin - Function that receives each entry as the first argument. Must return back the entry.
+ * @return {Promise<void>}
+ */
+async function loadCSVIntoJSON (csvFile, opts) {
+  const { plugin } = opts || {};
+
+  return new Promise$2((resolve, reject) => {
+    const values = [];
+
+    csv(omit(opts, 'plugin'))
+      .fromFile(resolveCSV(csvFile))
+      .on('json', (jsonObj) => {
+        values.push(process$1(jsonObj, plugin));
+      })
+      .on('done', async () => {
+        resolve(await Promise$2.all(values));
+      })
+      .on('error', (err) => {
+        reject(err);
+      });
+  })
+}
+
+/**
+ * @method dumpCSVIntoDB
+ * @param {String} csvFile - The csv file
+ * @param {String} entity - Entity where to load the entries
+ * @param {Object} opts - Additional options
+ * @param {Boolean} opts.info=true - Whether to print info messages
+ * @param {Boolean} opts.debug=false - Whether to print debug messages
+ * @param {Function|Promise} [opts.discriminator] - Optional function called with the entry being added as the only argument.
+ * @param {String} [opts.duplicateCheck] - Field to look for duplicates
+ * @param {Object} [opts.csv] - Options for {@link loadCSVIntoJSON}
+ * @return {Promise<void>}
+ */
+async function dumpCSVIntoDB (csvFile, entity, opts = {}) {
+  opts = ___default.defaults(opts, { info: true, debug: false, csv: null });
+  const { debug, info } = opts;
+  const { entities: models } = await getEntities();
+  const Model = models[entity];
+
+  if (!Model) {
+    return
+  }
+
+  const dumping = await loadCSVIntoJSON(csvFile, opts.csv);
+  // console.log({ dumping })
+  const { discriminator, duplicateCheck } = opts;
+  let added = 0;
+
+  await Promise$2
+    .all(dumping)
+    .each(async (entry) => {
+      if (discriminator && !await discriminator(entry)) {
+        debug && console.log('dismissing', JSON.stringify(entry), `by discriminator`);
+        return
+      }
+
+      entry = ___default.mapValues(entry, v => {
+        try {
+          v = JSON.parse(v);
+        } catch (err) {
+          debug && console.log({ err });
+        }
+
+        return v
+      });
+
+      if (duplicateCheck) {
+        const find = new RegExp(`^${ escapeRegexp(___default.get(entry, duplicateCheck).toLowerCase()) }$`, 'i');
+        const findOne = { [duplicateCheck]: find };
+        const existing = await Model.findOne(findOne);
+        if (existing) {
+          return info ? console.log(chalk.gray(`Refusing to add ${ ___default.get(entry, duplicateCheck) } in ${ entity }. [exists in ${ existing._id }]`)) : null
+        }
+      }
+
+      try {
+        await new Model(entry).save();
+        debug && console.log('added...');
+        added++;
+      } catch (err) {
+        info && console.log(err);
+        info && console.log(chalk.red(`import error: ${ err.message }`));
+        info && console.log(chalk.red(JSON.stringify(entry, null, 2)));
+
+        if (!info) {
+          throw err
+        }
+      }
+    });
+
+  if (added > 0) {
+    info && console.log(`added ${ added } entries into ${ entity }`);
+  }
+}
+
+const Promise$1 = require('bluebird');
+
+function dropDB () {
   return new Promise$1((resolve, reject) => {
-    const connection = getMongoConnection(merge({ driverOptions: { autoIndex: false } }, credentials));
+    const { getMongoConnection, getMongoCredentials } = require('../../get-mongoose-connection.js');
+    const credentials = getMongoCredentials();
+    const connection = getMongoConnection();
 
     connection.on('connected', () => {
       connection.dropDatabase((err, res) => {
@@ -1642,7 +1832,7 @@ function drop (credentials = {}) {
           return reject(new Error(`Error dropping db: ${ err }`))
         }
 
-        // console.log(`Database ${ getMongoCredentials().database } dropped!`)
+        console.log(`Database ${ credentials.database } dropped!`);
         resolve();
       });
     });
@@ -1651,27 +1841,21 @@ function drop (credentials = {}) {
 
 async function emptyModels () {
   const { entities } = await getEntities();
-
   const process = [];
-
-  forOwn(entities, (model, modelName) => {
-    process.push(model);
+  Object.keys(entities).forEach((entityName) => {
+    process.push(entities[entityName]);
   });
-
   return Promise$1
-    .each(process, model => model.deleteMany({}))
+    .each(process, entity => entity.deleteMany({}))
     .catch(err => {
-      console.log('Remove error', err);
+      console.log('remove error', err);
     })
 }
 
-var db = /*#__PURE__*/Object.freeze({
-  drop: drop,
-  emptyModels: emptyModels
-});
-
 var index$2 = {
-  db,
+  dumpCSVIntoDB,
+  dropDB,
+  emptyModels,
   backupDB,
   cleanMongooseEntry,
   getMongoose,
@@ -1689,7 +1873,6 @@ function watcher () {
     runningWatcher.close();
     runningWatcher = null;
   }
-
 
   const nuxtConfigFile = pleasureUtils.findRoot('./nuxt.config.js');
   const pleasureConfigFile = pleasureUtils.findRoot('./pleasure.config.js');
@@ -1737,8 +1920,8 @@ async function start (port) {
     withNuxt = true;
     let nuxtConfig = require(nuxtConfigFile);
 
-    const currentModules = nuxtConfig.modules = lodash.get(nuxtConfig, 'modules', []);
-    const currentModulesDir = nuxtConfig.modulesDir = lodash.get(nuxtConfig, 'modulesDir', []);
+    const currentModules = nuxtConfig.modules = _.get(nuxtConfig, 'modules', []);
+    const currentModulesDir = nuxtConfig.modulesDir = _.get(nuxtConfig, 'modulesDir', []);
     //console.log({ currentModulesDir })
     currentModulesDir.push(...require.main.paths.filter(p => {
       return currentModulesDir.indexOf(p) < 0

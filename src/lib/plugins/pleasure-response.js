@@ -3,6 +3,7 @@ import Boom from 'boom'
 import defaults from 'lodash/defaults'
 
 export default {
+  name: 'response',
   extend ({ router }) {
     // return pleasure api results
     router.use((ctx) => {

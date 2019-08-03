@@ -7,6 +7,7 @@ import omit from 'lodash/omit'
 import defaults from 'lodash/defaults'
 
 export default {
+  name: 'schemas',
   prepare ({ router }) {
     const api = getConfig()
 

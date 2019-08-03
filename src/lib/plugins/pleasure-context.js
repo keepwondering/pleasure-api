@@ -1,6 +1,7 @@
 import Boom from 'boom'
 
 export default {
+  name: 'context',
   prepare ({ router }) {
     router.use(async function robots (ctx, next) {
       ctx.response.set('X-Robots-Tag', 'noindex, nofollow')

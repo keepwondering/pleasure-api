@@ -20,12 +20,10 @@ import merge from 'deepmerge'
  * @property {String} [id=null] - The requested entry `id` of the `entity` (if any).
  * @property {String} [method=null] - API method (create, read, update, delete, list, push, pull).
  * @property {Object} [params=null] - `GET` variables sent within the request (if any).
- * @property {Function} queryFilter - Function that receives `entity` as the first parameter and parses it
- * chain query. The function can add query filters and then return the new `entry`. e.g.
+ * @property {Function} queryFilter - Array of functions that will be executed with the queried `entry` as the
+ * only parameter.
  * `entry => { return entry.find({ email: /@gmail.com$/i })}`.
  * See [mongoose queries](https://mongoosejs.com/docs/queries.html).
- * @property {Function[]} [_queryFilter=[]] - Array of functions that will be executed with the queried `entry` as the
- * only parameter.
  * @property {Function} overrideReadAccess - Receives an optional value to override read access on the current request.
  * @property {Boolean|Array|undefined} overriddenReadAccess - Holds an optional array with any overridden read access in
  * the pipeline.

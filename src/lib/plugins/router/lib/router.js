@@ -11,8 +11,7 @@ import { filterAccess } from './filter-access.js'
 import { isObjectId } from 'src/lib/utils/is-object-id'
 import get from 'lodash/get'
 import camelCase from 'lodash/camelCase'
-
-const { ObjectId } = Types
+import Promise from 'bluebird'
 
 let entities = null
 let pleasureEntityModelMap = null
@@ -214,8 +213,42 @@ export default {
       }
 
       const res = await resolveFn()
+      const overrideMethods = {}
 
-      ctx.$pleasure.res = filterAccess(res, overriddenReadAccess || await permissions[model].read(ctx.$pleasure.$api))
+      if (method === 'create' && res._id) {
+        let foundEntry
+        Object.assign(overrideMethods, {
+          async entry () {
+            if (foundEntry) {
+              return foundEntry
+            }
+            const entry = await entity.findById(res._id)
+
+            if (entry) {
+              entry.$pleasure = ctx.$pleasure.$api
+            }
+
+            foundEntry = entry
+
+            return entry
+          }
+        })
+      }
+
+      const entryPermissionFilter = async (entry) => {
+        const override = {}
+        if (entry) {
+          Object.assign(override, { entry () { return entry } })
+        }
+        return overriddenReadAccess || await permissions[model].read(Object.assign({}, ctx.$pleasure.$api, overrideMethods, override))
+      }
+
+      if (Array.isArray(res)) {
+        ctx.$pleasure.res = await Promise.map(res, async entry => filterAccess(entry, await entryPermissionFilter(entry)))
+      } else {
+        ctx.$pleasure.res = filterAccess(res, overriddenReadAccess || await permissions[model].read(Object.assign({}, ctx.$pleasure.$api, overrideMethods)))
+      }
+
       return next()
     })
   }

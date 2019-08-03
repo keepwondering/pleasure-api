@@ -5,9 +5,5 @@ export function filterAccess (res, access) {
     return res
   }
 
-  if (Array.isArray(res)) {
-    return res.map(v => pick(v, access))
-  }
-
   return pick(res, access)
 }

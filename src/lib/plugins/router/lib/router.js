@@ -75,12 +75,18 @@ export default {
       // todo: check if id is an objectId
       //  if it's not an ObjectId, it must be treated as an entity controller method
       if (isObjectId(id)) {
+        // store resolved entry in cache
+        let resolvedEntry
         entry = () => {
+          if (resolvedEntry) {
+            return resolvedEntry
+          }
           return entity.findById(id)
             .then(entry => {
               if (entry) {
                 entry.$pleasure = ctx.$pleasure.$api
               }
+              resolvedEntry = entry
               return entry
             })
         }

@@ -79,7 +79,7 @@ const _default = {
  */
 
 /**
- *
+ * @method API.getConfig
  * @param {Object} [override] - Optionally overrides local config
  * @return {ApiConfig}
  */

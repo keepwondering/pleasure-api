@@ -4,7 +4,6 @@ import { create, read, update, remove, list, push, pull } from './crud/index.js'
 import { queryFilter } from './parse-query-filter'
 import { resolvePleasureMethod } from './resolve-pleasure-method.js'
 import merge from 'deepmerge'
-import { Types } from 'mongoose'
 import Boom from 'boom'
 import { getPermissions } from 'src/lib/plugins/router/lib/get-permissions'
 import { filterAccess } from './filter-access.js'
@@ -18,12 +17,8 @@ let pleasureEntityModelMap = null
 let permissions = null
 
 export default {
-  config: {
-
-  },
-  name: 'crud',
+  name: 'crud-router',
   prepare ({ router, getEntities }) {
-
     getEntities()
       .then(({ entities: e, schemas }) => {
         permissions = getPermissions(schemas)

@@ -20,7 +20,6 @@ export function watcher () {
     runningWatcher = null
   }
 
-
   const nuxtConfigFile = findRoot('./nuxt.config.js')
   const pleasureConfigFile = findRoot('./pleasure.config.js')
 

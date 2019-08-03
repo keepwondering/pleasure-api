@@ -1,4 +1,5 @@
 import { initializeEntities } from './initialize-entities.js'
+import { getConfig } from './get-config'
 
 let entities = null
 let schemas = null
@@ -7,8 +8,7 @@ const finish = []
 const rejects = []
 
 /**
- * @function API.getEntities
- * @static
+ * @method API.getEntities
  * @summary Looks & initializes (if not initialized already) all entities found in the path `entitiesPath` located in {@link API.ApiConfig}
  * @desc Lists all `*.js` files found in {@link API.ApiConfig}`->entitiesPath` and initializes their respective mongoose
  * models.
@@ -28,10 +28,13 @@ export async function getEntities () {
     })
   }
 
+  const { createEntityTimeout } = getConfig()
+
   initializing = true
   const toC = setTimeout(() => {
-    rejects.forEach(r => r(new Error(`Entity creation timeout`)))
-  }, 3000)
+    rejects.forEach(r => r(new Error(`Entity creation timeout.`)))
+  }, createEntityTimeout)
+
   const { entities: theEntities, schemas: theSchemas } = await initializeEntities() //todo: check why not resolving
   entities = theEntities
   schemas = theSchemas

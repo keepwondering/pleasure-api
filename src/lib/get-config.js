@@ -12,6 +12,7 @@ const _default = {
   port: 3000,
   collectionListLimit: 100,
   collectionMaxListLimit: 300,
+  createEntityTimeout: 3000,
   mongodb: {
     host: 'localhost',
     port: 27017,
@@ -51,6 +52,8 @@ const _default = {
  * @property {Number} [timeout=15000] - Specifies how long a client must wait for the api to respond, in milliseconds
  * @property {Number} [collectionListLimit=100] - Default collection list limit
  * @property {Number} [collectionMaxListLimit=300] - Maximum list limit to be set by a client
+ * @property {Number} [createEntityTimeout=3000] - Milliseconds to wait for mongoose to connect to MongoDB and
+ * initialize all of the schemas. Would raise an "Entity creation timeout" error after this time.
  * @property {MongoDBConfig} mongodb - MongoDB credentials
  * @property {String} [entitiesPath=api/] - Path from where to load files containing #Entity, relative to project root
  * @property {String} [entitiesUri=/entities] - URI where to expose the #PleasureEntityMap

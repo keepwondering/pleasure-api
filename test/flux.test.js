@@ -5,7 +5,7 @@ import 'pleasure-core-dev-tools/test/clean-db-per-test.js'
 import './utils/web-server.js'
 import { adminLogin } from 'pleasure-core-dev-tools/test/admin-login.js'
 
-const pleasureClient = PleasureApiClient.instance()
+const pleasureClient = PleasureApiClient.instance({ reduxOptions: { autoConnect: false } })
 
 let dummyUser
 

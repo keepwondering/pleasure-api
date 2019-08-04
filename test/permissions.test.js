@@ -1,13 +1,12 @@
 import test from 'ava'
-import { PleasureApiClient } from 'pleasure-api-client' // pleasure
-import { PleasureApi } from 'pleasure' // pleasure
-// import { api, PleasureClient } from '../../' // pleasure
+import { PleasureApiClient } from 'pleasure-api-client'
+import { getPermissions, getEntities } from '../' // pleasure-api
+// import { api, PleasureClient } from '../../'
 import './utils/web-server.js'
 import 'pleasure-core-dev-tools/test/clean-db-per-test.js'
 import _ from 'lodash'
 
 const pleasureClient = PleasureApiClient.instance()
-const { getEntities, getPermissions } = PleasureApi
 // const { getPermissions } = api.plugins.authorization
 
 let dummyUser

@@ -13,7 +13,6 @@
  * @property {Function} [respond] - Filter function that receives the generated object that is gonna be returned along with
  * the request information.
  * @property {Function} [schemaCreated] - Hook called per entity created, meant to extend the schema functionality.
- * @property {Function} [entitiesCreated] - Hook called once all entities are created.
  *
  * @example Changing configuration of a plugin
  *
@@ -55,13 +54,6 @@ export default {
    */
   schemaCreated ({ entityName, mongooseSchema }) {
     // extend the schema functionality
-  },
-  /**
-   * @callback entitiesCreated
-   * @param {PleasureEntityMap} entityMap - The {@link PleasureEntityMap Pleasure Entity Map}.
-   */
-  entitiesCreated (entityMap) {
-    // extend the entities functionality
   },
   /**
    * @callback prepare

@@ -213,6 +213,7 @@ export default {
       if (method === 'create' && res._id) {
         let foundEntry
         Object.assign(overrideMethods, {
+          isNew: true,
           async entry () {
             if (foundEntry) {
               return foundEntry

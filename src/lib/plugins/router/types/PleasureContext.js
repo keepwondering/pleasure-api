@@ -9,6 +9,7 @@ import merge from 'deepmerge'
  * @property {Object} [user=null] - The user in session (if any). JWT value returned by the loginMethod.
  * See `jwtAuthentication.loginMethod` in {@link ApiConfig}
  * @property {Object} ctx - The koa context. See [koa#context](https://koajs.com/#context)
+ * @property {Boolean} isNew - Whether the entry being read was created in the same request or not.
  * @property {Object} entity - Mongoose model of the requested entity.
  * @property {Promise.<Object|null>|undefined} [entry] - A promised function that attempts to resolves the entry
  * `id` (if present).

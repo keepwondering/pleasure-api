@@ -1,4 +1,4 @@
-import { packageJson, extendConfig, getConfig as _getConfig, mergeConfigWithEnv } from 'pleasure-utils'
+import { overwriteMerge, packageJson, extendConfig, getConfig as _getConfig, mergeConfigWithEnv } from 'pleasure-utils'
 import kebabCase from 'lodash/kebabCase'
 import merge from 'deepmerge'
 import Promise from 'bluebird'
@@ -89,7 +89,9 @@ export function getConfig (override = {}) {
     return init
   }
 
-  const apiConfig = merge.all([{}, _default, _getConfig('api', override, false, false)])
+  const apiConfig = merge.all([{}, _default, _getConfig('api', override, false, false)], {
+    arrayMerge: overwriteMerge
+  })
   return mergeConfigWithEnv(apiConfig, 'PLEASURE_API')
 }
 

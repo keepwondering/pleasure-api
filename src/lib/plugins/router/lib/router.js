@@ -170,7 +170,11 @@ export default {
 
       const newContent = override({
         entryGranted,
-        entryResult: merge(entryGranted, appendEntry)
+        entryResult: merge(entryGranted, appendEntry, {
+          arrayMerge (destinationArray, sourceArray) {
+            return sourceArray
+          }
+        })
       })
 
       switch (method) {

@@ -1,4 +1,4 @@
-import { findRoot, readdirAsync } from 'pleasure-utils'
+import { overwriteMerge, findRoot, readdirAsync } from 'pleasure-utils'
 import { getConfig } from './get-config.js'
 import Entity from 'src/types/Entity.js'
 import { getCollectionName } from './get-collection-name.js'
@@ -37,7 +37,9 @@ export async function getPleasureEntityMap () {
 
     const name = pleasureEntity.name || getCollectionName(path.parse(entity).name)
 
-    PleasureSchemaMap[name] = merge.all([Entity, pleasureEntity, { name }])
+    PleasureSchemaMap[name] = merge.all([Entity, pleasureEntity, { name }], {
+      arrayMerge: overwriteMerge
+    })
   })
 
   return PleasureSchemaMap

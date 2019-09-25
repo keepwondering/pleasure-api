@@ -63,7 +63,11 @@ export async function initializeEntities () {
       toJSON: {
         virtuals: true
       }
-    }, model.schemaOptions || {}))
+    }, model.schemaOptions || {}, {
+      arrayMerge (destinationArray, sourceArray) {
+        return sourceArray
+      }
+    }))
 
     mongooseSchema.pre('save', function (next) {
       if (this.isNew) {
@@ -80,7 +84,7 @@ export async function initializeEntities () {
 
     // also discriminate and extend access
     if (discriminator || extend) {
-      pleasureEntityMap[entityName].access = merge(pleasureEntityMap[discriminator || extend].access || {}, access || {})
+      pleasureEntityMap[entityName].access = merge.all([{}, pleasureEntityMap[discriminator || extend].access || {}, access || {}])
       // console.log(`extending access`, pleasureEntityMap[entityName].access)
     }
 

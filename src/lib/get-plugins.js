@@ -10,6 +10,7 @@ import pleasureResponse from './plugins/pleasure-response'
 import merge from 'deepmerge'
 import get from 'lodash/get'
 import { getConfig } from './get-config.js'
+import { overwriteMerge } from 'pleasure-utils'
 
 export function getPlugins (configOverride) {
   const api = getConfig(configOverride)
@@ -30,7 +31,9 @@ export function getPlugins (configOverride) {
 
   plugins.forEach(plugin => {
     const { config = {} } = plugin
-    const pluginConfig = merge.all([{}, config || {}, get(api, plugin.name, {})])
+    const pluginConfig = merge.all([{}, config || {}, get(api, plugin.name, {})], {
+      arrayMerge: overwriteMerge
+    })
 
     if (!plugin.methods) {
       return

@@ -10,7 +10,11 @@ export function getPermissions (schemas) {
   const permissions = {}
   // todo: fix access
   Object.keys(schemas).forEach(Entity => {
-    permissions[Entity] = merge.all([{}, defaultPermissions, schemas[Entity].access || {}])
+    permissions[Entity] = merge.all([{}, defaultPermissions, schemas[Entity].access || {}], {
+      arrayMerge (destinationArray, sourceArray) {
+        return sourceArray
+      }
+    })
   })
 
   return permissions

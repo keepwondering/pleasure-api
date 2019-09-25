@@ -3,7 +3,7 @@ import { getConfig, setConfig } from './get-config.js'
 import { getMongoose } from './get-mongoose.js'
 import mongoose from 'mongoose'
 import { getPlugins } from './get-plugins.js'
-import { EventBus, getConfig as _getConfig } from 'pleasure-utils'
+import { overwriteMerge, EventBus, getConfig as _getConfig } from 'pleasure-utils'
 import { getEntities } from './get-entities'
 import merge from 'deepmerge'
 
@@ -98,7 +98,9 @@ export function pleasureApi (config, server) {
   plugins.forEach(plugin => {
     const { name, config = {}, schemaCreated, init, prepare: prepareCallback, extend: extendCallback } = plugin
     // console.log({ name, config })
-    merge(config, getConfig()[name] || {})
+    merge(config, getConfig()[name] || {}, {
+      arrayMerge: overwriteMerge
+    })
     // console.log({ config })
     const pluginMainPayload = Object.assign({ config }, mainPayload)
 

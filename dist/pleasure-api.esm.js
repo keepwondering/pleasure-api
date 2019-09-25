@@ -3,7 +3,7 @@
  * (c) 2018-2019 Martin Rafael Gonzalez <tin@devtin.io>
  * Released under the MIT License.
  */
-import { packageJson, getConfig as getConfig$1, mergeConfigWithEnv, extendConfig, readdirAsync, findRoot, EventBus } from 'pleasure-utils';
+import { packageJson, getConfig as getConfig$1, overwriteMerge, mergeConfigWithEnv, extendConfig, readdirAsync, findRoot, EventBus } from 'pleasure-utils';
 import kebabCase from 'lodash/kebabCase';
 import merge from 'deepmerge';
 import Promise$2 from 'bluebird';
@@ -23,6 +23,8 @@ import merge$1 from 'lodash/merge';
 import get from 'lodash/get';
 import omit from 'lodash/omit';
 import pick from 'lodash/pick';
+import flatten from 'lodash/flatten';
+import uniq from 'lodash/uniq';
 import socketIo from 'pleasure-api-plugin-socket-io';
 import fluxPattern from 'pleasure-api-plugin-flux';
 import qs from 'qs';
@@ -40,15 +42,10 @@ import querystring from 'querystring';
 import tar from 'tar';
 import rimraf from 'rimraf';
 import csv from 'csvtojson/v1';
-import _, { get as get$1 } from 'lodash';
+import _ from 'lodash';
 import concat from 'lodash/concat';
 import chalk from 'chalk';
 import escapeRegexp from 'escape-string-regexp';
-import { printCommandsIndex } from 'pleasure-cli';
-import Koa from 'koa';
-import koaBody from 'koa-body';
-import { Nuxt, Builder } from 'nuxt';
-import chokidar from 'chokidar';
 
 const { name } = packageJson();
 
@@ -136,7 +133,9 @@ function getConfig (override = {}) {
     return init
   }
 
-  const apiConfig = merge.all([{}, _default, getConfig$1('api', override, false, false)]);
+  const apiConfig = merge.all([{}, _default, getConfig$1('api', override, false, false)], {
+    arrayMerge: overwriteMerge
+  });
   return mergeConfigWithEnv(apiConfig, 'PLEASURE_API')
 }
 
@@ -223,7 +222,9 @@ async function getPleasureEntityMap () {
 
     const name = pleasureEntity.name || getCollectionName(path.parse(entity).name);
 
-    PleasureSchemaMap[name] = merge.all([Entity, pleasureEntity, { name }]);
+    PleasureSchemaMap[name] = merge.all([Entity, pleasureEntity, { name }], {
+      arrayMerge: overwriteMerge
+    });
   });
 
   return PleasureSchemaMap
@@ -244,6 +245,7 @@ async function getPleasureEntityMap () {
  */
 
 mongoose.set('useCreateIndex', true);
+mongoose.set('autoIndex', true);
 
 mongoose.Promise = require('bluebird');
 mongoose.plugin(require('mongoose-beautiful-unique-validation'));
@@ -417,7 +419,11 @@ async function initializeEntities () {
       toJSON: {
         virtuals: true
       }
-    }, model.schemaOptions || {}));
+    }, model.schemaOptions || {}, {
+      arrayMerge (destinationArray, sourceArray) {
+        return sourceArray
+      }
+    }));
 
     mongooseSchema.pre('save', function (next) {
       if (this.isNew) {
@@ -434,7 +440,7 @@ async function initializeEntities () {
 
     // also discriminate and extend access
     if (discriminator || extend) {
-      pleasureEntityMap[entityName].access = merge(pleasureEntityMap[discriminator || extend].access || {}, access || {});
+      pleasureEntityMap[entityName].access = merge.all([{}, pleasureEntityMap[discriminator || extend].access || {}, access || {}]);
       // console.log(`extending access`, pleasureEntityMap[entityName].access)
     }
 
@@ -551,7 +557,7 @@ var index = {
 var helmet = {
   name: 'helmet',
   prepare ({ router }) {
-    const { helmet: helmetConfig = {} } = getConfig$2('api');
+    const { helmet: helmetConfig = {} } = getConfig$2();
     router.use(helmet$1(helmetConfig));
   }
 };
@@ -640,15 +646,220 @@ async function getSchemaPaths () {
   return schemaPath
 }
 
+let schemaIndexes;
+
+/**
+ * Retrieves models indexes
+ * @return {Promise<*>}
+ */
+async function getSchemaIndexes () {
+  if (schemaIndexes) {
+    return schemaIndexes
+  }
+
+  schemaIndexes = {};
+
+  const { entities } = await getEntities();
+
+  await Promise$2.each(Object.keys(entities), async (entityName) => {
+    const entity = entities[entityName];
+    const indexes = await entity.collection.getIndexes({ full: true });
+    const sort = [];
+    const search = [];
+    indexes.forEach(v => {
+      if (v.hasOwnProperty('weights')) {
+        return search.push(...Object.keys(v.weights))
+      }
+      sort.push(...Object.keys(v.key));
+    });
+    merge$1(
+      schemaIndexes,
+      {
+        [entityName]: {
+          sort,
+          search
+        }
+      }
+    );
+  });
+
+  return schemaIndexes
+}
+
+/**
+ * @typedef {Function} ApiHook
+ * @desc A function that attaches to an {@link API.Access} request.
+ *
+ * @param {ApiContext} apiContext - ApiContext of the request or undefined. See {@link ApiContext}
+ *
+ * @return {Boolean|String[]} - `true` to perform the operation, `false` otherwise. Alternatively, an array of strings
+ * representing each field of the entity that the request is granted access to. Defaults to `false`.
+ *
+ * @example
+ *
+ * function create ({ user }) {
+ *   return user.level === 'admin'
+ * }
+ */
+
+/**
+ * @typedef {Object} API.Access
+ * @desc Orchestrates access permissions to entities.
+ *
+ * http calls to the api endpoint are treated as follow:
+ *
+ * | HTTP method | Endpoint | Access Triggered | Description |
+ * | :--- | :--- | :--- | :--- |
+ * | POST | `/:entity` | `create` | Creates a new entry into `/:entity` |
+ * | GET | `/:entity/:id/:target?` | `read` | Retrieves the entry defined by `/:id` (optionally returns only the property `/:target` of the entry, if any) |
+ * | PATCH | `/:entity/:id/:dotted-path-to-some-field` or `/:entity?id=[...]` | `update` | Updates entry referred as `/:id` or `?id=[...]` |
+ * | DELETE | `/:entity/:id` | `delete` | Deletes entry referred as `/:id` |
+ * | GET | `/:entity` | `list` | Lists entries in an entity |
+ * | POST | `/:entity/:id/:path-to-array-field` | `push` | Pushes into an entry's array |
+ * | DELETE | `/:entity/:id/:path-to-array-field-id` | `pull` | Pulls out of an entry's array |
+ *
+ * @property {ApiHook} create - Called when attempting to create one or several entry(s) in an entity.
+ * @property {ApiHook} read - Called when attempting to read an entry of the entity.
+ * @property {ApiHook} update - Called when attempting to update one or several entry(s) from the entity.
+ * @property {ApiHook} delete - Called when attempting to delete one or several entry(s) from the entity.
+ * @property {ApiHook} push - Called when attempting to push into an entry's array.
+ * @property {ApiHook} pull - Called when attempting to pull out of an entry's array.
+ * @property {ApiHook} schema - Called when fetching schema information via API
+ */
+
+function anyUser ({ user }) {
+  return !!user
+}
+
+function anyBody () {
+  return true
+}
+
+var defaultPermissions = {
+  create: anyUser,
+  read: anyBody,
+  update: anyUser,
+  delete: anyUser,
+  list: anyBody,
+  push: anyUser,
+  pull: anyUser,
+  async schema (ctx = {}) {
+    //  console.log(`retrieving schema from ${ this.name }`)
+    // check if any returns method true or append arrays
+    let auth = [];
+    const methods = ['read', 'list', 'update', 'create'];
+    await Promise$2.each(methods, async method => {
+      if (!Array.isArray(auth)) {
+        return
+      }
+
+      const p = await this[method](ctx);
+
+      if (!Array.isArray(p)) {
+        if (p) {
+          auth = true;
+          console.log('breaking');
+          return false
+        }
+        return
+      }
+
+      auth.push(...p);
+    });
+    return Array.isArray(auth) ? (auth.length > 0 ? uniq(auth) : false) : auth
+  }
+};
+
+/**
+ *
+ * @param {Object} schemas - Schema map
+ * @return {Promise<void>}
+ */
+function getPermissions (schemas) {
+  const permissions = {};
+  // todo: fix access
+  Object.keys(schemas).forEach(Entity => {
+    permissions[Entity] = merge.all([{}, defaultPermissions, schemas[Entity].access || {}], {
+      arrayMerge (destinationArray, sourceArray) {
+        return sourceArray
+      }
+    });
+  });
+
+  return permissions
+}
+
+var authorization = /*#__PURE__*/Object.freeze({
+  getPermissions: getPermissions
+});
+
+/**
+ * @typedef {Object} ApiContext
+ * @memberOf API
+ *
+ * Object passed on all of the pleasure api hooks.
+ *
+ * @property {Object} [user=null] - The user in session (if any). JWT value returned by the loginMethod.
+ * See `jwtAuthentication.loginMethod` in {@link ApiConfig}
+ * @property {Object} ctx - The koa context. See [koa#context](https://koajs.com/#context)
+ * @property {Boolean} isNew - Whether the entry being read was created in the same request or not.
+ * @property {Object} entity - Mongoose model of the requested entity.
+ * @property {Promise.<Object|null>|undefined} [entry] - A promised function that attempts to resolves the entry
+ * `id` (if present).
+ * @property {String} [entryPath=null] - Optional path to the entry field. i.e. `_.pick(entry, entryPath)`
+ * @property {Object|null} newEntry - The raw data passed to the entity request via `POST`.
+ * @property {Object} appendEntry - Mutable object to be merged with `newEntry` at the end of the pipeline.
+ * @property {Object} [entryGranted=null] - Entry filtered according to given access.
+ * @property {Object} [entryResult=null] - Resulting merged object between `entryGranted` and `appendEntry`.
+ * @property {String} [id=null] - The requested entry `id` of the `entity` (if any).
+ * @property {String} [method=null] - API method (create, read, update, delete, list, push, pull, schema).
+ * @property {Object} [params=null] - `GET` variables sent within the request (if any).
+ * @property {Function} queryFilter - Array of functions that will be executed with the queried `entry` as the
+ * only parameter.
+ * `entry => { return entry.find({ email: /@gmail.com$/i })}`.
+ * See [mongoose queries](https://mongoosejs.com/docs/queries.html).
+ * @property {Function} overrideReadAccess - Receives an optional value to override read access on the current request.
+ * @property {Boolean|Array|undefined} overriddenReadAccess - Holds an optional array with any overridden read access in
+ * the pipeline.
+ */
+
+function ApiContext (apiContext) {
+  try {
+    return Object.assign(
+      {
+        user: null,
+        ctx: null,
+        entity: null,
+        entry () {
+
+        },
+        params: {},
+        entryPath: null,
+        newEntry: null,
+        appendEntry: {},
+        entryGranted: null,
+        entryResult: null,
+        queryFilter: []
+      },
+      apiContext
+    )
+  } catch (err) {
+    console.log(`error pleasure context`, { apiContext, err });
+    return apiContext
+  }
+}
+
 var schemas$1 = {
   name: 'schemas',
-  prepare ({ router }) {
+  prepare ({ router, pleasureEntityMap }) {
     const api = getConfig();
-
+    const permissions = getPermissions(pleasureEntityMap);
     let schemas;
+    let originalSchemas;
 
     getSchemaPaths()
       .then(entitiesSchema => {
+        originalSchemas = Object.assign({}, entitiesSchema);
         forOwn(entitiesSchema, (entity, entityName) => {
           forOwn(entity, (field, fieldName) => {
             const $pleasure = get(field, `options.$pleasure`);
@@ -659,20 +870,55 @@ var schemas$1 = {
             $pleasure && delete field.options.$pleasure;
             entity[fieldName] = pick(field, ['path', 'instance', 'options', 'enumValues', '$pleasure']);
           });
-          entitiesSchema[entityName] = omit(entitiesSchema[entityName], ['__v']);
+          entitiesSchema[entityName] = omit(entitiesSchema[entityName], ['__v', '__t']);
         });
         // console.log({entitiesSchema})
 
         schemas = entitiesSchema;
       });
 
-    router.get(`${api.entitiesUri}`, async (ctx, next) => {
+    router.get(`${ api.entitiesUri }`, async (ctx, next) => {
       if (!schemas) {
-        console.log(`schemas not ready :\\`);
         return next()
       }
 
-      ctx.$pleasure.res = schemas;
+      // handling permissions by request auth
+      const auth = {};
+      const { user } = ctx.$pleasure;
+
+      await Promise$2.each(Object.keys(pleasureEntityMap), async (entity) => {
+        const granted = await permissions[entity].schema(ApiContext({
+          schema: true,
+          user,
+          ctx,
+          entity
+        }));
+
+        if (granted) {
+          auth[entity] = granted;
+        }
+      });
+
+      const granted = flatten(Object.keys(auth).map(model => {
+        const access = auth[model];
+        if (Array.isArray(access)) {
+          return access.map(field => `${ model }.${ field }`)
+        }
+
+        return model
+      }));
+
+      const indexes = await getSchemaIndexes();
+      const grantedSchemas = Object.assign({}, pick(schemas, granted));
+
+      forOwn(grantedSchemas, (schema, schemaName) => {
+        console.log({ schemaName, schema });
+        grantedSchemas[schemaName] = merge(schema, {
+          $pleasure: { index: indexes[schemaName] }
+        });
+      });
+
+      ctx.$pleasure.res = grantedSchemas;
       return next()
     });
   }
@@ -732,8 +978,8 @@ class ApiError extends Error {
   }
 }
 
-async function read ({ entity, id, entryPath, queryFilter }) {
-  let doc = await queryFilter(entity.findById(id));
+async function read ({ entity, id, entryPath, execQueryFilter }) {
+  let doc = await execQueryFilter(entity.findById(id));
   const fullIdentifier = id + (entryPath ? `/${entryPath}` : '');
 
   if (entryPath) {
@@ -784,10 +1030,10 @@ async function update ({ id, entry, newEntry, entryGranted, entryResult, access 
 }
 
 async function remove ($pleasureApiCtx) {
-  const { queryFilter, entry, entity, params: { id, many = false } } = $pleasureApiCtx;
+  const { execQueryFilter, entry, entity, params: { id, many = false } } = $pleasureApiCtx;
 
   if (entry) {
-    return (await queryFilter(entry)).remove()
+    return (await execQueryFilter(entry)).remove()
   }
 
   if (typeof id !== 'object') {
@@ -826,10 +1072,12 @@ async function remove ($pleasureApiCtx) {
     }
   });
 
+  // todo: do something with errored messages
+
   return removed
 }
 
-async function list ({ entity, params, queryFilter }) {
+async function list ({ entity, params, execQueryFilter }) {
   // console.log(`listing`, queryFilter)
   let query = entity.find({});
 
@@ -854,7 +1102,7 @@ async function list ({ entity, params, queryFilter }) {
     query = query.limit(params.limit);
   }
 
-  return queryFilter(query)
+  return execQueryFilter(query)
 }
 
 async function push ({ entity, id, entryPath, newEntry, params }) {
@@ -962,83 +1210,6 @@ function resolvePleasureMethod (ctx) {
   }
 }
 
-/**
- * @typedef {Function} ApiHook
- * @desc A function that attaches to an {@link API.Access} request.
- *
- * @param {ApiContext} apiContext - ApiContext of the request. See {@link ApiContext}
- *
- * @return {Boolean|String[]} - `true` to perform the operation, `false` otherwise. Alternatively, an array of strings
- * representing each field of the entity that the request is granted access to. Defaults to `false`.
- *
- * @example
- *
- * function create ({ user }) {
- *   return user.level === 'admin'
- * }
- */
-
-/**
- * @typedef {Object} API.Access
- * @desc Orchestrates access permissions to entities.
- *
- * http calls to the api endpoint are treated as follow:
- *
- * | HTTP method | Endpoint | Access Triggered | Description |
- * | :--- | :--- | :--- | :--- |
- * | POST | `/:entity` | `create` | Creates a new entry into `/:entity` |
- * | GET | `/:entity/:id/:target?` | `read` | Retrieves the entry defined by `/:id` (optionally returns only the property `/:target` of the entry, if any) |
- * | PATCH | `/:entity/:id/:dotted-path-to-some-field` or `/:entity?id=[...]` | `update` | Updates entry referred as `/:id` or `?id=[...]` |
- * | DELETE | `/:entity/:id` | `delete` | Deletes entry referred as `/:id` |
- * | GET | `/:entity` | `list` | Lists entries in an entity |
- * | POST | `/:entity/:id/:path-to-array-field` | `push` | Pushes into an entry's array |
- * | DELETE | `/:entity/:id/:path-to-array-field-id` | `pull` | Pulls out of an entry's array |
- *
- * @property {ApiHook} create - Called when attempting to create one or several entry(s) in an entity.
- * @property {ApiHook} read - Called when attempting to read an entry of the entity.
- * @property {ApiHook} update - Called when attempting to update one or several entry(s) from the entity.
- * @property {ApiHook} delete - Called when attempting to delete one or several entry(s) from the entity.
- * @property {ApiHook} push - Called when attempting to push into an entry's array.
- * @property {ApiHook} pull - Called when attempting to pull out of an entry's array.
- */
-
-function anyUser ({ user }) {
-  return !!user
-}
-
-function anyBody () {
-  return true
-}
-
-var defaultPermissions = {
-  create: anyUser,
-  read: anyBody,
-  update: anyUser,
-  delete: anyUser,
-  list: anyBody,
-  push: anyUser,
-  pull: anyUser
-};
-
-/**
- *
- * @param {Object} schemas - Schema map
- * @return {Promise<void>}
- */
-function getPermissions (schemas) {
-  const permissions = {};
-  // todo: fix access
-  Object.keys(schemas).forEach(Entity => {
-    permissions[Entity] = merge.all([{}, defaultPermissions, schemas[Entity].access || {}]);
-  });
-
-  return permissions
-}
-
-var authorization = /*#__PURE__*/Object.freeze({
-  getPermissions: getPermissions
-});
-
 function filterAccess (res, access) {
   if (typeof access === 'boolean' && access) {
     return res
@@ -1056,6 +1227,10 @@ const { ObjectId } = Types;
  * @return {Boolean} - Whether `id` is or not a valid ObjectId
  */
 function isObjectId (id) {
+  if (id instanceof ObjectId) {
+    return true
+  }
+
   return ObjectId.isValid(id) && new ObjectId(id).toString() === id
 }
 
@@ -1113,8 +1288,7 @@ var router = {
       const params = parseNumberAndBoolean(qs.parse(querystring, { interpretNumericEntities: true }));
 
       let controller;
-      // todo: check if id is an objectId
-      //  if it's not an ObjectId, it must be treated as an entity controller method
+
       if (isObjectId(id)) {
         // store resolved entry in cache
         let resolvedEntry;
@@ -1132,6 +1306,7 @@ var router = {
             })
         };
       } else if (id) {
+        // treating id as an entity controller method
         const controllerMethod = id;
         id = null;
         const controllerPath = `controller.${ camelCase(controllerMethod) }`;
@@ -1160,8 +1335,10 @@ var router = {
       }
 
       Object.assign(ctx.$pleasure.$api, {
-        queryFilter (entity) {
-          // console.log(`queryFilter`, { entity }, ctx.$pleasure.$api.queryFilter)
+        queryFilter (cb) {
+          return ctx.$pleasure.$api._queryFilter.push(cb)
+        },
+        execQueryFilter (entity) {
           return queryFilter(entity, ctx.$pleasure.$api._queryFilter)
         },
         overrideReadAccess (newAccess) {
@@ -1217,7 +1394,11 @@ var router = {
 
       const newContent = override({
         entryGranted,
-        entryResult: merge(entryGranted, appendEntry)
+        entryResult: merge(entryGranted, appendEntry, {
+          arrayMerge (destinationArray, sourceArray) {
+            return sourceArray
+          }
+        })
       });
 
       switch (method) {
@@ -1260,10 +1441,12 @@ var router = {
       if (method === 'create' && res._id) {
         let foundEntry;
         Object.assign(overrideMethods, {
+          isNew: true,
           async entry () {
             if (foundEntry) {
               return foundEntry
             }
+            // to auto-populate...
             const entry = await entity.findById(res._id);
 
             if (entry) {
@@ -1334,7 +1517,9 @@ function getPlugins (configOverride) {
 
   plugins.forEach(plugin => {
     const { config = {} } = plugin;
-    const pluginConfig = merge.all([{}, config || {}, get(api, plugin.name, {})]);
+    const pluginConfig = merge.all([{}, config || {}, get(api, plugin.name, {})], {
+      arrayMerge: overwriteMerge
+    });
 
     if (!plugin.methods) {
       return
@@ -1442,7 +1627,9 @@ function pleasureApi (config, server) {
   plugins.forEach(plugin => {
     const { name, config = {}, schemaCreated, init, prepare: prepareCallback, extend: extendCallback } = plugin;
     // console.log({ name, config })
-    merge(config, getConfig()[name] || {});
+    merge(config, getConfig()[name] || {}, {
+      arrayMerge: overwriteMerge
+    });
     // console.log({ config })
     const pluginMainPayload = Object.assign({ config }, mainPayload);
 
@@ -1638,7 +1825,7 @@ const pif$1 = (w, what = null) => {
 
 function getMongoUri$1 (credentials = {}) {
   // important: do not move to the global scope
-  const { mongodb } = getConfig$2('api');
+  const { mongodb } = getConfig$2();
 
   const { username = mongodb.username, password = mongodb.password, host = mongodb.host, port = mongodb.port, database = mongodb.database } = credentials;
   let { driverOptions = {} } = credentials;
@@ -1647,7 +1834,7 @@ function getMongoUri$1 (credentials = {}) {
 }
 
 async function backupDB ({ name, compress = true, verbose = true } = {}) {
-  const { mongodb } = getConfig$2('api');
+  const { mongodb } = getConfig$2();
   // todo: implement plugins
   // const { tmpFolder, uploadFolder } = require('../../server/utils/project-paths')
 
@@ -1845,7 +2032,23 @@ async function emptyModels () {
     })
 }
 
+/**
+ * Compares two mongoose ObjectId's.
+ *
+ * @param {String|ObjectId} id1 - The id to validate
+ * @param {String|ObjectId} id2 - The id to validate
+ * @return {Boolean} - Whether `id1` and `id2` are equal, despite their type
+ */
+function idsAreEqual (id1, id2) {
+  id1 = isObjectId(id1) ? id1.toString() : id1;
+  id2 = isObjectId(id2) ? id2.toString() : id2;
+  console.log({ id1, id2 }, typeof id1, typeof id2);
+  return id1 === id2
+}
+
 var index$2 = {
+  isObjectId,
+  idsAreEqual,
   dumpCSVIntoDB,
   dropDB,
   emptyModels,
@@ -1856,166 +2059,4 @@ var index$2 = {
   parseNumberAndBoolean
 };
 
-let runningConnection;
-let runningBuilder;
-let runningPort;
-let runningWatcher;
-
-function watcher () {
-  if (runningWatcher) {
-    runningWatcher.close();
-    runningWatcher = null;
-  }
-
-  const nuxtConfigFile = findRoot('./nuxt.config.js');
-  const pleasureConfigFile = findRoot('./pleasure.config.js');
-
-  // delete cache
-  if (fs.existsSync(nuxtConfigFile)) {
-    delete require.cache[require.resolve(nuxtConfigFile)];
-  }
-
-  delete require.cache[require.resolve(pleasureConfigFile)];
-
-  const { watchForRestart = [] } = getConfig$2('ui');
-  const cacheClean = [nuxtConfigFile, pleasureConfigFile].concat(watchForRestart);
-  runningWatcher = chokidar.watch(cacheClean, { ignored: /(^|[\/\\])\../, ignoreInitial: true });
-
-  runningWatcher.on('all', (event, path) => {
-    // todo: trigger restart
-    restart()
-      .catch(err => {
-        console.log(`restarting failed with error`, err.message);
-      });
-  });
-}
-
-async function start (port) {
-  if (runningConnection) {
-    console.error(`An app is already running`);
-    return
-  }
-
-  const nuxtConfigFile = findRoot('./nuxt.config.js');
-
-  // delete cache
-  delete require.cache[require.resolve(nuxtConfigFile)];
-  delete require.cache[require.resolve(findRoot('./pleasure.config.js'))];
-
-  const apiConfig = getConfig$2();
-  port = port || apiConfig.port;
-
-  let withNuxt = false;
-  let nuxt;
-
-  // enable nuxt
-  if (fs.existsSync(nuxtConfigFile)) {
-    withNuxt = true;
-    let nuxtConfig = require(nuxtConfigFile);
-
-    const currentModules = nuxtConfig.modules = get$1(nuxtConfig, 'modules', []);
-    const currentModulesDir = nuxtConfig.modulesDir = get$1(nuxtConfig, 'modulesDir', []);
-    //console.log({ currentModulesDir })
-    currentModulesDir.push(...require.main.paths.filter(p => {
-      return currentModulesDir.indexOf(p) < 0
-    }));
-    //console.log({ currentModulesDir })
-    const ui = ['pleasure-ui-nuxt', {
-      root: findRoot(),
-      name: packageJson().name,
-      config: getConfig$2('ui'),
-      pleasureRoot: path.join(__dirname, '..')
-    }];
-    currentModules.push(ui);
-
-    //console.log({ nuxtConfig })
-    nuxt = new Nuxt(nuxtConfig);
-
-    // Build in development
-    if (nuxtConfig.dev) {
-      const builder = new Builder(nuxt);
-      runningBuilder = builder;
-      await builder.build();
-    }
-  }
-
-  const app = new Koa();
-
-  app.use(koaBody());
-
-  const server = runningConnection = app.listen(port);
-  runningPort = port;
-
-  app.use(pleasureApi({
-    prefix: apiConfig.prefix,
-    plugins: apiConfig.plugins
-  }, server));
-
-  // nuxt
-  if (withNuxt) {
-    app.use(ctx => {
-      ctx.status = 200;
-      ctx.respond = false; // Mark request as handled for Koa
-      ctx.req.ctx = ctx; // This might be useful later on, e.g. in nuxtServerInit or with nuxt-stash
-      nuxt.render(ctx.req, ctx.res);
-    });
-  }
-
-  process.send && process.send('pleasure-ready');
-
-  watcher();
-
-  return port
-}
-
-async function restart () {
-  if (!runningPort || !runningConnection) {
-    console.error(`No app instance running`);
-    return
-  }
-
-  if (runningBuilder) {
-    await runningBuilder.close();
-    runningBuilder = null;
-  }
-
-  runningConnection.close();
-  runningConnection = null;
-  return start(runningPort)
-}
-
-const cli = {
-  root: {
-    command () {
-      printCommandsIndex(cli.commands);
-    }
-  },
-  commands: [
-    {
-      name: 'start',
-      help: 'starts the app in production',
-      async command (args) {
-        const port = await start();
-        console.log(`Pleasure running on ${ port }`);
-        process.emit('pleasure-initialized');
-      }
-    }
-  ]
-};
-
-/**
- * @see {@link https://github.com/maxogden/subcommand}
- */
-function cli$1 (subcommand) {
-  return {
-    name: 'app',
-    help: 'app options',
-    command ({ _: args }) {
-      // console.log(`calling app`, { args })
-      const match = subcommand(cli);
-      match(args);
-    }
-  }
-}
-
-export { ApiError, index as MongooseTypes, cli$1 as cli, getConfig, getEntities, getMongoConnection, getMongoCredentials, getMongoose, getPermissions, getPleasureEntityMap, getPlugins, initializeEntities, pleasureApi, index$1 as plugins, index$2 as utils };
+export { ApiError, index as MongooseTypes, getConfig, getEntities, getMongoConnection, getMongoCredentials, getMongoose, getPermissions, getPleasureEntityMap, getPlugins, initializeEntities, pleasureApi, index$1 as plugins, index$2 as utils };

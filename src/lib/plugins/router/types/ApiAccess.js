@@ -5,7 +5,7 @@ import uniq from 'lodash/uniq'
  * @typedef {Function} ApiHook
  * @desc A function that attaches to an {@link API.Access} request.
  *
- * @param {ApiContext} apiContext - ApiContext of the request. See {@link ApiContext}
+ * @param {ApiContext} apiContext - ApiContext of the request or undefined. See {@link ApiContext}
  *
  * @return {Boolean|String[]} - `true` to perform the operation, `false` otherwise. Alternatively, an array of strings
  * representing each field of the entity that the request is granted access to. Defaults to `false`.

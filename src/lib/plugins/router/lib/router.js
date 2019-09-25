@@ -113,8 +113,10 @@ export default {
       }
 
       Object.assign(ctx.$pleasure.$api, {
-        queryFilter (entity) {
-          // console.log(`queryFilter`, { entity }, ctx.$pleasure.$api.queryFilter)
+        queryFilter (cb) {
+          return ctx.$pleasure.$api._queryFilter.push(cb)
+        },
+        execQueryFilter (entity) {
           return queryFilter(entity, ctx.$pleasure.$api._queryFilter)
         },
         overrideReadAccess (newAccess) {

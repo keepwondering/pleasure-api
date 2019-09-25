@@ -12,7 +12,7 @@ import { getPlugins } from 'lib/get-plugins'
 import mongoose from 'mongoose'
 import { getConfig } from 'lib/get-config.js'
 import { getMongoose } from './lib/get-mongoose'
-import cli from './lib/cli'
+// import cli from './lib/cli'
 
 /**
  * @class API
@@ -20,7 +20,7 @@ import cli from './lib/cli'
  */
 
 export {
-  cli,
+  // cli,
   getMongoose,
   getConfig,
   getMongoCredentials,

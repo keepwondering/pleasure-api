@@ -1,4 +1,4 @@
-export async function list ({ entity, params, queryFilter }) {
+export async function list ({ entity, params, execQueryFilter }) {
   // console.log(`listing`, queryFilter)
   let query = entity.find({})
 
@@ -23,5 +23,5 @@ export async function list ({ entity, params, queryFilter }) {
     query = query.limit(params.limit)
   }
 
-  return queryFilter(query)
+  return execQueryFilter(query)
 }

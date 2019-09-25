@@ -66,8 +66,7 @@ export default {
       const params = parseNumberAndBoolean(qs.parse(querystring, { interpretNumericEntities: true }))
 
       let controller
-      // todo: check if id is an objectId
-      //  if it's not an ObjectId, it must be treated as an entity controller method
+
       if (isObjectId(id)) {
         // store resolved entry in cache
         let resolvedEntry
@@ -85,6 +84,7 @@ export default {
             })
         }
       } else if (id) {
+        // treating id as an entity controller method
         const controllerMethod = id
         id = null
         const controllerPath = `controller.${ camelCase(controllerMethod) }`
@@ -224,6 +224,7 @@ export default {
             if (foundEntry) {
               return foundEntry
             }
+            // to auto-populate...
             const entry = await entity.findById(res._id)
 
             if (entry) {

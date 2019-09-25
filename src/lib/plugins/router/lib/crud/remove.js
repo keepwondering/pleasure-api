@@ -1,10 +1,10 @@
 import Promise from 'bluebird'
 
 export async function remove ($pleasureApiCtx) {
-  const { queryFilter, entry, entity, params: { id, many = false } } = $pleasureApiCtx
+  const { execQueryFilter, entry, entity, params: { id, many = false } } = $pleasureApiCtx
 
   if (entry) {
-    return (await queryFilter(entry)).remove()
+    return (await execQueryFilter(entry)).remove()
   }
 
   if (typeof id !== 'object') {
@@ -42,6 +42,8 @@ export async function remove ($pleasureApiCtx) {
       errors.push({ _id: entry._id, message: err.message })
     }
   })
+
+  // todo: do something with errored messages
 
   return removed
 }

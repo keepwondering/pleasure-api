@@ -1,8 +1,8 @@
 import { ApiError } from 'pleasure-api-client/src/lib/api-error'
 import get from 'lodash/get'
 
-export async function read ({ entity, id, entryPath, queryFilter }) {
-  let doc = await queryFilter(entity.findById(id))
+export async function read ({ entity, id, entryPath, execQueryFilter }) {
+  let doc = await execQueryFilter(entity.findById(id))
   const fullIdentifier = id + (entryPath ? `/${entryPath}` : '')
 
   if (entryPath) {

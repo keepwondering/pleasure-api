@@ -65,16 +65,16 @@ test(`Exposes entities via http`, async t => {
   // load schemas from api server
   const entities = await pleasureClient.list('schemas')
 
-  t.deepEqual(Object.keys(entities).sort(), testEntities)
+  t.deepEqual(Object.keys(entities).sort(), testEntities.filter(v => v !== 'order'))
 
   // iterating through entities
   _.forOwn(entities, (entity) => {
     t.true(typeof entity === 'object')
 
     // iterating through fields in entity
-    _.forOwn(entity, (field) => {
+    _.forOwn(entity, (field, fieldName) => {
       // skipping virtuals
-      if (_.get(field, 'options.options.virtual')) {
+      if (_.get(field, 'options.options.virtual') || fieldName === '$pleasure') {
         return
       }
 
@@ -84,4 +84,17 @@ test(`Exposes entities via http`, async t => {
       expect(field).to.have.property('instance')
     })
   })
+})
+
+test(`Retrieves models schemas filtered by auth user`, async t => {
+  let entities = await pleasureClient.list('schemas')
+  t.is(Object.keys(entities).length, 3)
+
+  await pleasureClient.login({
+    email: 'tin@devtin.io',
+    password: 'aVeryStrongPassword123:)'
+  })
+
+  entities = await pleasureClient.list('schemas')
+  t.is(Object.keys(entities).length, 4)
 })

@@ -1,3 +1,6 @@
+import Promise from 'bluebird'
+import uniq from 'lodash/uniq'
+
 /**
  * @typedef {Function} ApiHook
  * @desc A function that attaches to an {@link API.Access} request.
@@ -36,6 +39,7 @@
  * @property {ApiHook} delete - Called when attempting to delete one or several entry(s) from the entity.
  * @property {ApiHook} push - Called when attempting to push into an entry's array.
  * @property {ApiHook} pull - Called when attempting to pull out of an entry's array.
+ * @property {ApiHook} schema - Called when fetching schema information via API
  */
 
 function anyUser ({ user }) {
@@ -53,5 +57,30 @@ export default {
   delete: anyUser,
   list: anyBody,
   push: anyUser,
-  pull: anyUser
+  pull: anyUser,
+  async schema (ctx = {}) {
+    //  console.log(`retrieving schema from ${ this.name }`)
+    // check if any returns method true or append arrays
+    let auth = []
+    const methods = ['read', 'list', 'update', 'create']
+    await Promise.each(methods, async method => {
+      if (!Array.isArray(auth)) {
+        return
+      }
+
+      const p = await this[method](ctx)
+
+      if (!Array.isArray(p)) {
+        if (p) {
+          auth = true
+          console.log('breaking')
+          return false
+        }
+        return
+      }
+
+      auth.push(...p)
+    })
+    return Array.isArray(auth) ? (auth.length > 0 ? uniq(auth) : false) : auth
+  }
 }

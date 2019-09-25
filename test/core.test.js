@@ -68,6 +68,7 @@ test(`Creates entries`, async t => {
 })
 
 test(`Reads entries by id from entities`, async t => {
+  await adminLogin()
   const entry = await pleasureApiClient.read(`user`, dummyUser._id)
   t.truthy(entry)
   t.is(dummyUser.email, entry.email)

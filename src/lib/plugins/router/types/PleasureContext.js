@@ -19,7 +19,7 @@ import merge from 'deepmerge'
  * @property {Object} [entryGranted=null] - Entry filtered according to given access.
  * @property {Object} [entryResult=null] - Resulting merged object between `entryGranted` and `appendEntry`.
  * @property {String} [id=null] - The requested entry `id` of the `entity` (if any).
- * @property {String} [method=null] - API method (create, read, update, delete, list, push, pull).
+ * @property {String} [method=null] - API method (create, read, update, delete, list, push, pull, schema).
  * @property {Object} [params=null] - `GET` variables sent within the request (if any).
  * @property {Function} queryFilter - Array of functions that will be executed with the queried `entry` as the
  * only parameter.

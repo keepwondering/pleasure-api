@@ -30,16 +30,27 @@ import merge from 'deepmerge'
  */
 
 export default function ApiContext (apiContext) {
-  return merge({
-    user: null,
-    ctx: null,
-    entity: null,
-    entry: null,
-    entryPath: null,
-    newEntry: null,
-    appendEntry: {},
-    entryGranted: null,
-    entryResult: null,
-    queryFilter: []
-  }, apiContext)
+  try {
+    return Object.assign(
+      {
+        user: null,
+        ctx: null,
+        entity: null,
+        entry () {
+
+        },
+        params: {},
+        entryPath: null,
+        newEntry: null,
+        appendEntry: {},
+        entryGranted: null,
+        entryResult: null,
+        queryFilter: []
+      },
+      apiContext
+    )
+  } catch (err) {
+    console.log(`error pleasure context`, { apiContext, err })
+    return apiContext
+  }
 }

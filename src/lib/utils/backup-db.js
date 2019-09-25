@@ -16,7 +16,7 @@ const pif = (w, what = null) => {
 
 export function getMongoUri (credentials = {}) {
   // important: do not move to the global scope
-  const { mongodb } = getConfig('api')
+  const { mongodb } = getConfig()
 
   const { username = mongodb.username, password = mongodb.password, host = mongodb.host, port = mongodb.port, database = mongodb.database } = credentials
   let { driverOptions = {} } = credentials
@@ -25,7 +25,7 @@ export function getMongoUri (credentials = {}) {
 }
 
 export async function backupDB ({ name, compress = true, verbose = true } = {}) {
-  const { mongodb } = getConfig('api')
+  const { mongodb } = getConfig()
   // todo: implement plugins
   // const { tmpFolder, uploadFolder } = require('../../server/utils/project-paths')
 

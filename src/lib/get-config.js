@@ -92,6 +92,7 @@ export function getConfig (override = {}) {
   const apiConfig = merge.all([{}, _default, _getConfig('api', override, false, false)], {
     arrayMerge: overwriteMerge
   })
+
   return mergeConfigWithEnv(apiConfig, 'PLEASURE_API')
 }
 

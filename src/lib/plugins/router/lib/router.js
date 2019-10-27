@@ -1,4 +1,4 @@
-import { parseNumberAndBoolean } from 'src/lib/utils/parse-number-and-boolean'
+import { sanitateUrlParamsToMongoDriver } from 'src/lib/utils/sanitate-url-params-to-mongo-driver'
 import qs from 'qs'
 import { create, read, update, remove, list, push, pull } from './crud/index.js'
 import { queryFilter } from './parse-query-filter'
@@ -63,7 +63,7 @@ export default {
       let entity = ctx.$pleasure.$api.entities[model] // mongoose.model(model)
 
       const { querystring } = ctx.request
-      const params = parseNumberAndBoolean(qs.parse(querystring, { interpretNumericEntities: true }))
+      const params = sanitateUrlParamsToMongoDriver(qs.parse(querystring, { interpretNumericEntities: true }))
 
       let controller
 

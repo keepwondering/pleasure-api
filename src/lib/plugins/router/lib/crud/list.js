@@ -8,11 +8,22 @@ export async function list ({ entity, params, execQueryFilter }) {
 
   if (params.find) {
     // todo: restrict query by access level
+    // todo: IMPORTANT to restrict prior release
     query = query.find(params.find)
   }
 
   if (params.sort) {
-    query = query.sort(params.sort)
+    // guarantee sort order
+    let sort
+    if (Array.isArray(params.sort)) {
+      sort = {}
+      params.sort.forEach(filter => {
+        Object.assign(sort, filter)
+      })
+    } else {
+      sort = params.sort
+    }
+    query = query.sort(sort)
   }
 
   if (params.skip && Number.isInteger(params.skip)) {

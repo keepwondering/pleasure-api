@@ -142,6 +142,7 @@ function getConfig (override = {}) {
   const apiConfig = merge.all([{}, _default, pleasureUtils.getConfig('api', override, false, false)], {
     arrayMerge: pleasureUtils.overwriteMerge
   });
+
   return pleasureUtils.mergeConfigWithEnv(apiConfig, 'PLEASURE_API')
 }
 
@@ -252,6 +253,9 @@ async function getPleasureEntityMap () {
 
 mongoose__default.set('useCreateIndex', true);
 mongoose__default.set('autoIndex', true);
+mongoose__default.set('useNewUrlParser', true);
+mongoose__default.set('useFindAndModify', false);
+mongoose__default.set('useUnifiedTopology', true);
 
 mongoose__default.Promise = require('bluebird');
 mongoose__default.plugin(require('mongoose-beautiful-unique-validation'));
@@ -796,6 +800,7 @@ function getPermissions (schemas) {
 }
 
 var authorization = /*#__PURE__*/Object.freeze({
+  __proto__: null,
   getPermissions: getPermissions
 });
 
@@ -930,24 +935,34 @@ var schemas$1 = {
   }
 };
 
-function parseNumberAndBoolean (v) {
-  if (typeof v === 'object' && !Array.isArray(v)) {
-    return mapValues(v, parseNumberAndBoolean)
+function sanitateUrlParamsToMongoDriver (params, child) {
+  if (typeof params === 'object' && !Array.isArray(params)) {
+    return mapValues(params, theParams => {
+      return sanitateUrlParamsToMongoDriver(theParams)
+    })
   }
 
-  if (Array.isArray(v)) {
-    return v
+  if (Array.isArray(params)) {
+    return params
   }
 
-  if (/^-?[\d]+(\.[\d]+)?$/.test(v)) {
-    return Number(v)
+  if (typeof params === 'string' && /^-?[\d]+(\.[\d]+)?$/.test(params)) {
+    return Number(params)
   }
 
-  if (/^(true|false)$/.test(v)) {
-    return v === 'true'
+  if (/^(true|false)$/.test(params)) {
+    return params === 'true'
   }
 
-  return v
+  if (typeof params === 'string') {
+    try {
+      return JSON.parse(params)
+    } catch (err) {
+      // shhh...
+    }
+  }
+
+  return params
 }
 
 async function create ($pleasureApiCtx) {
@@ -1093,11 +1108,22 @@ async function list ({ entity, params, execQueryFilter }) {
 
   if (params.find) {
     // todo: restrict query by access level
+    // todo: IMPORTANT to restrict prior release
     query = query.find(params.find);
   }
 
   if (params.sort) {
-    query = query.sort(params.sort);
+    // guarantee sort order
+    let sort;
+    if (Array.isArray(params.sort)) {
+      sort = {};
+      params.sort.forEach(filter => {
+        Object.assign(sort, filter);
+      });
+    } else {
+      sort = params.sort;
+    }
+    query = query.sort(sort);
   }
 
   if (params.skip && Number.isInteger(params.skip)) {
@@ -1291,7 +1317,7 @@ var router = {
       let entity = ctx.$pleasure.$api.entities[model]; // mongoose.model(model)
 
       const { querystring } = ctx.request;
-      const params = parseNumberAndBoolean(qs.parse(querystring, { interpretNumericEntities: true }));
+      const params = sanitateUrlParamsToMongoDriver(qs.parse(querystring, { interpretNumericEntities: true }));
 
       let controller;
 
@@ -2062,7 +2088,7 @@ var index$2 = {
   cleanMongooseEntry,
   getMongoose,
   httpMethodToMongoMethod,
-  parseNumberAndBoolean
+  sanitateUrlParamsToMongoDriver
 };
 
 exports.mongoose = mongoose__default;

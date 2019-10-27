@@ -121,6 +121,9 @@ test(`Delete event hook per entry.`, async t => {
   })
 })
 
+// todo: deleteMany
+// todo: updateMany
+
 test(`Update event hook per entry.`, async t => {
   const productToUpdate = (await pleasureClient.product.list())[0]
   let updatedProduct

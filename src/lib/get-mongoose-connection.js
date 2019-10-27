@@ -18,6 +18,9 @@ import { getConfig as _getConfig } from 'pleasure-utils'
 
 mongoose.set('useCreateIndex', true)
 mongoose.set('autoIndex', true)
+mongoose.set('useNewUrlParser', true)
+mongoose.set('useFindAndModify', false)
+mongoose.set('useUnifiedTopology', true)
 
 mongoose.Promise = require('bluebird')
 mongoose.plugin(require('mongoose-beautiful-unique-validation'))

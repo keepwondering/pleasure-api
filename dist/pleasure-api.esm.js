@@ -143,17 +143,11 @@ function getConfig (override = {}) {
 extendConfig('api', getConfig);
 
 /**
- * @typedef {Object} API.Entity
- * @memberOf API
+ * @typedef {Object} API~Entity
+ * @member API
  *
- * A `Entity` is a file exporting an object with the representation of the `model` and `controller` components
+ * An `ApiEntity` consists in a representation of the `model` and `controller` components
  * found in an `mvc` pattern, putted altogether.
- *
- * If you are familiar with mongoose, The `model.schema` property would be the object passed to the `Schema` constructor
- * in mongoose, and the property `model.schemaOptions` would the options of the mongoose `Schema` constructor.
- *
- * i.e. `new mongoose.Schema(Entity.model.schema, Entity.model.schemaOptions)`.
- * See [Defining your schema](https://mongoosejs.com/docs/guide.html#definition) in the mongoose documentation website.
  *
  * @property {String} name - Optional name of the entity. This value will be used as the mongoDB collection name
  * and `key` name of the entity in the {@link PleasureEntityMap}. If not present, it will default to a `kebabCase`
@@ -179,6 +173,27 @@ extendConfig('api', getConfig);
  *
  * @see [mongoose](https://mongoosejs.com)
  * @see [mongoose Schemas](https://mongoosejs.com)
+ *
+ * @example
+ *
+ *  If you are familiar with mongoose, the `ApiEntity.model.schema` property would be the object passed to the `mongoose.Schema`
+ * constructor. The property `ApiEntity.model.schemaOptions` would the options of the mongoose `Schema` constructor.
+ *
+ * i.e. `new mongoose.Schema(Entity.model.schema, Entity.model.schemaOptions)`.
+ * See [Defining your schema](https://mongoosejs.com/docs/guide.html#definition) in the mongoose documentation website.
+ *
+ * ```js
+ * // ApiEntity example
+ * // api/model.js
+ *
+ * export default {
+ *   model: {
+ *     schema: {
+ *       name: String
+ *     }
+ *   }
+ * }
+ * ```
  */
 
 var Entity = {
@@ -305,6 +320,7 @@ function getMongoUri (credentials) {
  * })
  * ```
  */
+
 function getMongoConnection (config) {
   const { debug, mongodb, mongodb: { driverOptions } } = getConfig(config ? { mongodb: config } : {});
 
@@ -762,7 +778,7 @@ var defaultPermissions = {
       if (!Array.isArray(p)) {
         if (p) {
           auth = true;
-          console.log('breaking');
+          // console.log('breaking')
           return false
         }
         return
@@ -917,7 +933,6 @@ var schemas$1 = {
       const grantedSchemas = Object.assign({}, pick(schemas, granted));
 
       forOwn(grantedSchemas, (schema, schemaName) => {
-        console.log({ schemaName, schema });
         grantedSchemas[schemaName] = merge(schema, {
           $pleasure: { index: indexes[schemaName] }
         });

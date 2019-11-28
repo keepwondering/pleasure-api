@@ -75,7 +75,6 @@ export default {
       const grantedSchemas = Object.assign({}, pick(schemas, granted))
 
       forOwn(grantedSchemas, (schema, schemaName) => {
-        console.log({ schemaName, schema })
         grantedSchemas[schemaName] = merge(schema, {
           $pleasure: { index: indexes[schemaName] }
         })

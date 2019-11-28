@@ -73,7 +73,7 @@ export default {
       if (!Array.isArray(p)) {
         if (p) {
           auth = true
-          console.log('breaking')
+          // console.log('breaking')
           return false
         }
         return

@@ -1,6 +1,5 @@
 import mongoose from 'mongoose'
 import { getConfig } from './get-config.js'
-import { getConfig as _getConfig } from 'pleasure-utils'
 
 /**
  * @typedef MongoClient
@@ -76,6 +75,7 @@ export function getMongoUri (credentials) {
  * })
  * ```
  */
+
 export function getMongoConnection (config) {
   const { debug, mongodb, mongodb: { driverOptions } } = getConfig(config ? { mongodb: config } : {})
 

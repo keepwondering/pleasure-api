@@ -53,12 +53,13 @@ test(`Initializes 'PleasureEntities' as mongodb collections`, async t => {
 })
 
 /**
- * Extending an entity means using mongoose discriminators
+ * Extending an entity means using mongoose discriminators... but does it work for access too?
  */
 test(`Extends entities model and controller`, async t => {
   const { schemas } = await getEntities()
   const { provider, user } = getPermissions(schemas)
   t.is(provider.create, user.create)
+  // todo: verify what else extends... like does it extend the schema?
 })
 
 test(`Exposes entities via http`, async t => {
